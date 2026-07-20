@@ -9,12 +9,17 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
+import fastifyCookie from '@fastify/cookie';
 import { randomUUID } from 'node:crypto';
 import type { Kysely } from 'kysely';
 import type { Database } from '../../infrastructure/postgres/schema.js';
 import type { Env } from '../../config/env.js';
 import { registerHealthRoute } from './routes/health.js';
 import { registerErrorHandler } from './errors.js';
+import { PostgresIdentityService } from '../../infrastructure/postgres/identity-service.js';
+import { registerAuthRoutes } from './routes/auth.js';
+import { registerAdminUserRoutes } from './routes/admin-users.js';
+import { AppError } from '../../application/errors.js';
 
 export interface BuildServerOptions {
   readonly env: Env;
@@ -49,6 +54,8 @@ export async function buildServer({
           'req.headers.cookie',
           'res.headers["set-cookie"]',
           'req.body.password',
+          'req.body.currentPassword',
+          'req.body.newPassword',
           'req.body.token',
         ],
         censor: '[REDACTADO]',
@@ -66,11 +73,12 @@ export async function buildServer({
     genReqId: () => randomUUID(),
     requestIdHeader: 'x-request-id',
     trustProxy: true,
-    disableRequestLogging: false,
   });
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  await app.register(fastifyCookie);
 
   // Cabeceras de seguridad. CSP se deja en el default de helmet: el frontend
   // real todavia no existe y afinarla ahora seria adivinar.
@@ -94,6 +102,22 @@ export async function buildServer({
     allowList: (request) => request.url === '/health',
   });
 
+  // CORS controla qué respuestas puede leer otro origen; no reemplaza CSRF.
+  // Esta verificación adicional rechaza escrituras que declaran un Origin no
+  // autorizado antes de alcanzar cualquier operación de dominio.
+  app.addHook('onRequest', (request, _reply, done) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+      done();
+      return;
+    }
+    const origin = request.headers.origin;
+    if (origin && !env.CORS_ORIGINS.includes(origin)) {
+      done(new AppError('ORIGIN_NOT_ALLOWED', 'Origen no autorizado.', 403));
+      return;
+    }
+    done();
+  });
+
   // Devuelve el request id al cliente: sin esto, un usuario que reporta un
   // error no tiene como referenciarlo y hay que adivinar en los logs.
   app.addHook('onSend', (request, reply, payload, done) => {
@@ -107,10 +131,14 @@ export async function buildServer({
     openapi: {
       info: {
         title: 'FactuFlow API',
-        description: 'Solicitudes de Factura. Fase 1: fundaciones tecnicas.',
+        description: 'FactuFlow. Fase 2: autenticación, usuarios, roles y sesiones.',
         version,
       },
-      tags: [{ name: 'sistema', description: 'Estado y diagnostico' }],
+      tags: [
+        { name: 'sistema', description: 'Estado y diagnóstico' },
+        { name: 'autenticación', description: 'Sesión y cuenta propia' },
+        { name: 'administración', description: 'Usuarios, roles, sesiones y auditoría' },
+      ],
     },
     transform: jsonSchemaTransform,
   });
@@ -118,6 +146,9 @@ export async function buildServer({
   await app.register(fastifySwaggerUi, { routePrefix: '/docs' });
 
   registerHealthRoute(app, { db, version });
+  const identity = new PostgresIdentityService(db, env);
+  registerAuthRoutes(app, { env, identity });
+  registerAdminUserRoutes(app, { env, identity });
 
   return app;
 }

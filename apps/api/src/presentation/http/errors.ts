@@ -3,6 +3,7 @@ import {
   hasZodFastifySchemaValidationErrors,
   isResponseSerializationError,
 } from 'fastify-type-provider-zod';
+import { AppError } from '../../application/errors.js';
 
 /**
  * Manejo centralizado de errores.
@@ -20,16 +21,7 @@ import {
  * en `audit_event.request_id`.
  */
 
-export class AppError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly statusCode: number = 400,
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
+export { AppError } from '../../application/errors.js';
 
 interface ErrorBody {
   error: {

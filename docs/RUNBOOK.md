@@ -1,0 +1,47 @@
+# Runbook de autenticación — Fase 2
+
+## Puesta en marcha
+
+1. Configure `.env` desde `.env.example` sin usar credenciales reales.
+2. Ejecute `npm ci`, `npm run docker:up`, `npm run db:migrate` y `npm run db:status`.
+3. Confirme PostgreSQL y API healthy, web 200, `/health` con `status=ok` y `/docs` 200.
+4. Si no existe un ADMIN activo, ejecute `npm run user:bootstrap-admin`.
+
+El bootstrap es interactivo. No pase passwords en argumentos ni en PowerShell. La contraseña temporal aparece una vez; no queda en base, logs ni auditoría. El primer acceso queda limitado a cambiar contraseña o cerrar sesión.
+
+## Variables
+
+| Variable                          |             Default | Uso                                                         |
+| --------------------------------- | ------------------: | ----------------------------------------------------------- |
+| `SESSION_COOKIE_NAME`             | `factuflow_session` | Cookie HttpOnly; sincronizar con `VITE_SESSION_COOKIE_NAME` |
+| `SESSION_IDLE_MINUTES`            |               `480` | Expiración por inactividad                                  |
+| `SESSION_ABSOLUTE_MINUTES`        |              `1440` | Límite absoluto                                             |
+| `SESSION_ACTIVITY_UPDATE_MINUTES` |                 `5` | Throttling de actividad                                     |
+| `LOGIN_MAX_ATTEMPTS`              |                 `5` | Fallos por ventana                                          |
+| `LOGIN_ATTEMPT_WINDOW_MINUTES`    |                `15` | Ventana de fallos                                           |
+| `LOGIN_LOCK_MINUTES`              |                `15` | Bloqueo                                                     |
+| `LOGIN_ATTEMPT_RETENTION_DAYS`    |                `90` | Retención documentada                                       |
+| `PASSWORD_HASH_MEMORY_KIB`        |             `65536` | Memoria Argon2id                                            |
+| `PASSWORD_HASH_TIME_COST`         |                 `3` | Costo Argon2id                                              |
+| `PASSWORD_HASH_PARALLELISM`       |                 `1` | Paralelismo Argon2id                                        |
+
+`SESSION_IDLE_MINUTES` no puede superar la duración absoluta. Producción rechaza memoria Argon2 inferior a 65536 KiB.
+
+## Operación
+
+- Crear, editar, activar, desactivar, asignar roles, resetear contraseña o revocar sesiones: `/admin/usuarios` con ADMIN.
+- Un usuario se desactiva; nunca se elimina físicamente.
+- Desactivar o resetear revoca sesiones. No se puede desactivar ni quitar el rol al último ADMIN activo.
+- El reset muestra una nueva contraseña temporal una vez. No existe envío de correo en esta fase.
+- Sesiones propias: `/mi-cuenta`. La fuente de verdad siempre es `/auth/me`; no hay token en localStorage ni sessionStorage.
+
+## Diagnóstico
+
+- 401: sesión inexistente, expirada o usuario desactivado; volver a login.
+- 403 `PASSWORD_CHANGE_REQUIRED`: cambiar la contraseña temporal.
+- 403 `CSRF_INVALID`: revisar cookie CSRF, header y origen permitido.
+- 409 `USER_DUPLICATE`: username o correo ya existe; CITEXT hace la comparación sin distinguir mayúsculas.
+- 409 `LAST_ACTIVE_ADMIN`: primero cree o active otro ADMIN.
+- Login siempre usa mensaje genérico; investigue con `requestId` y auditoría, nunca revelando existencia de cuenta.
+
+No edite `audit_event` ni `login_attempt` con el rol de aplicación. La purga de intentos antiguos se programa fuera del API y sólo con owner.

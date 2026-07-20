@@ -65,6 +65,17 @@ services:
       # (T-13). El host es `postgres`, el nombre del servicio en esta red.
       DATABASE_URL_APP: postgresql://${FACTUFLOW_APP_USER}:${FACTUFLOW_APP_PASSWORD}@postgres:5432/${POSTGRES_DB}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-factuflow_session}
+      SESSION_IDLE_MINUTES: ${SESSION_IDLE_MINUTES:-480}
+      SESSION_ABSOLUTE_MINUTES: ${SESSION_ABSOLUTE_MINUTES:-1440}
+      SESSION_ACTIVITY_UPDATE_MINUTES: ${SESSION_ACTIVITY_UPDATE_MINUTES:-5}
+      LOGIN_MAX_ATTEMPTS: ${LOGIN_MAX_ATTEMPTS:-5}
+      LOGIN_ATTEMPT_WINDOW_MINUTES: ${LOGIN_ATTEMPT_WINDOW_MINUTES:-15}
+      LOGIN_LOCK_MINUTES: ${LOGIN_LOCK_MINUTES:-15}
+      LOGIN_ATTEMPT_RETENTION_DAYS: ${LOGIN_ATTEMPT_RETENTION_DAYS:-90}
+      PASSWORD_HASH_MEMORY_KIB: ${PASSWORD_HASH_MEMORY_KIB:-65536}
+      PASSWORD_HASH_TIME_COST: ${PASSWORD_HASH_TIME_COST:-3}
+      PASSWORD_HASH_PARALLELISM: ${PASSWORD_HASH_PARALLELISM:-1}
     ports:
       - '${API_PORT:-3000}:3000'
     depends_on:
@@ -92,6 +103,7 @@ services:
       # La consume el NAVEGADOR, no el contenedor: por eso `localhost` y no
       # `api`. Confundir ambos es el error clásico de este archivo.
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+      VITE_SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-factuflow_session}
       WEB_PORT: 5173
     ports:
       - '${WEB_PORT:-5173}:5173'

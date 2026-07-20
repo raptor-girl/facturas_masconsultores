@@ -2,7 +2,7 @@
 
 Sistema de Solicitudes de Factura. Reemplaza el sistema anterior de MAS.
 
-**Estado: Fase 1 — fundaciones técnicas.** No hay solicitudes, ni clientes, ni Excel, ni UF, ni login. Nada de eso es un olvido: está fuera del alcance aprobado. Ver `docs/PHASE_1_STATUS.md`.
+**Estado: Fase 2 — autenticación, usuarios, roles, sesiones y trazabilidad.** No hay clientes, solicitudes, cálculos, UF ni Excel: siguen fuera del alcance aprobado. Ver `docs/PHASE_2_STATUS.md`.
 
 ---
 
@@ -95,6 +95,16 @@ npm test                   # todo
 
 La primera corrida descarga `postgres:16-alpine` y tarda. Después, segundos.
 
+### 5.1 · Crear el primer ADMIN
+
+Después de aplicar migraciones, cuando aún no existe un ADMIN activo:
+
+```bash
+npm run user:bootstrap-admin
+```
+
+El comando solicita username, correo y nombre visible de forma interactiva. Genera una contraseña temporal aleatoria, guarda sólo Argon2id, la muestra una vez y exige cambiarla en el primer login. No admite contraseñas por argumentos ni crea usuarios desde migraciones. Para desarrollo use identidades ficticias con `example.invalid`.
+
 ### 6 · Comprobar que está vivo
 
 ```powershell
@@ -122,7 +132,7 @@ Respuesta esperada:
 
 | URL                          | Qué es                                   |
 | ---------------------------- | ---------------------------------------- |
-| http://localhost:5173        | Web (scaffold)                           |
+| http://localhost:5173/login  | Inicio de sesión                         |
 | http://localhost:3000/health | Estado                                   |
 | http://localhost:3000/docs   | OpenAPI, generado desde los esquemas Zod |
 
@@ -168,6 +178,7 @@ npm run dev            # levanta API y web localmente
 | `npm run db:migrate`                            | Aplica migraciones (rol owner)   |
 | `npm run db:rollback`                           | Revierte la última               |
 | `npm run db:status`                             | Qué falta (dry-run)              |
+| `npm run user:bootstrap-admin`                  | Crea el primer ADMIN             |
 | `npm run docker:up` / `down` / `logs` / `reset` | Entorno                          |
 | `npm run verify`                                | Formato + lint + tipos + pruebas |
 
@@ -182,10 +193,10 @@ factuflow/
 │   │   ├── migrations/         SQL, node-pg-migrate
 │   │   └── src/
 │   │       ├── domain/         Reglas puras. No importa NADA.
-│   │       ├── application/    Casos de uso. Vacía en Fase 1, a propósito.
+│   │       ├── application/    Puertos y casos de uso
 │   │       ├── infrastructure/ PostgreSQL, drivers
 │   │       └── presentation/   HTTP
-│   └── web/                    React + Vite (scaffold)
+│   └── web/                    React + Vite
 ├── packages/shared-schemas/    Contratos Zod compartidos API ↔ web
 ├── infra/docker/               Dockerfiles y bootstrap de PostgreSQL
 └── docs/                       Evidencia del sistema anterior
@@ -250,13 +261,16 @@ Dos defectos del sistema anterior que aquí no existen:
 
 ## Documentación
 
-| Documento                           | Qué contiene                                        |
-| ----------------------------------- | --------------------------------------------------- |
-| `docs/PHASE_1_STATUS.md`            | **Qué está verificado y qué no.** Empieza por aquí  |
-| `docs/LEGACY_BACKEND_EVIDENCE.md`   | Qué prueba `back.zip`. Incluye riesgos de seguridad |
-| `docs/UF_LEGACY_BEHAVIOR.md`        | UF real: el «endpoint del SII» es un scrape de HTML |
-| `docs/ROUNDING_REGRESSION_CASES.md` | IVA y redondeos, con aritmética verificada          |
-| `docs/EXCEL_LEGACY_BEHAVIOR.md`     | Celdas exactas y la variante AFP Habitat            |
+| Documento                           | Qué contiene                                          |
+| ----------------------------------- | ----------------------------------------------------- |
+| `docs/PHASE_1_STATUS.md`            | **Qué está verificado y qué no.** Empieza por aquí    |
+| `docs/PHASE_2_STATUS.md`            | Estado, pruebas y límites de autenticación            |
+| `docs/ARCHITECTURE.md`              | Arquitectura de identidad, sesiones, CSRF y auditoría |
+| `docs/RUNBOOK.md`                   | Operación segura de usuarios y sesiones               |
+| `docs/LEGACY_BACKEND_EVIDENCE.md`   | Qué prueba `back.zip`. Incluye riesgos de seguridad   |
+| `docs/UF_LEGACY_BEHAVIOR.md`        | UF real: el «endpoint del SII» es un scrape de HTML   |
+| `docs/ROUNDING_REGRESSION_CASES.md` | IVA y redondeos, con aritmética verificada            |
+| `docs/EXCEL_LEGACY_BEHAVIOR.md`     | Celdas exactas y la variante AFP Habitat              |
 
 ---
 
@@ -274,6 +288,6 @@ Ningún `password_hash` del sistema anterior se migra. Nunca.
 
 ## Qué NO hay todavía
 
-Login, usuarios, clientes, receptores, responsables, CP/MS, productos, solicitudes, duplicación, UF, cálculos, Excel, migración del master, frontend real.
+Clientes, receptores, responsables operativos, perfiles de coordinador, CP/MS, productos, solicitudes, duplicación, UF, cálculos, Excel y migración del master.
 
 Todo eso llega en fases posteriores, **con aprobación explícita**. Ver `docs/PHASE_1_STATUS.md`.
