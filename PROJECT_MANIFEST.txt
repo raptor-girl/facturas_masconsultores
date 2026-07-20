@@ -1,0 +1,146 @@
+═══════════════════════════════════════════════════════════════════════
+ FactuFlow V1 — Fase 1 (fundaciones técnicas)
+ PROJECT_MANIFEST.txt
+═══════════════════════════════════════════════════════════════════════
+
+ Generado:  2026-07-17 22:00:29 UTC
+ Archivos:  61 (incluido este manifiesto)
+
+ ⚠️  ESTADO — leer docs/PHASE_1_STATUS.md antes que nada.
+
+     El entorno donde se construyó esta fase NO tenía red, ni Docker,
+     ni PostgreSQL. Todo el código está completo, pero:
+
+       · NO se ejecutó npm install  → no hay package-lock.json
+       · NO se ejecutó tsc          → no se afirma que compile
+       · NO se ejecutó Vitest       → no se afirma que las pruebas pasen
+       · NO se aplicó ninguna migración
+       · NO se levantó docker compose
+
+     Los 12 criterios de término se verifican en tu máquina.
+     Runbook completo en README.md.
+
+ 🔴 RIESGO ABIERTO
+
+     El .env dentro de back.zip contiene un SLACK_BOT_TOKEN real.
+     Su valor nunca se reprodujo, pero el token viajó en un ZIP.
+     ACCIÓN: rotarlo. Ver docs/LEGACY_BACKEND_EVIDENCE.md §1.
+
+═══════════════════════════════════════════════════════════════════════
+ CONTENIDO — excluido a propósito
+═══════════════════════════════════════════════════════════════════════
+
+   .env · node_modules · .git · dist · back.zip · bdmaster.sql
+   seed.json · *.sqlite / -wal / -shm · *.xlsx · *.xls
+   storage/ · exports/ · tokens · contraseñas · datos personales
+
+   Se conserva .env.example (plantilla, sin valores sensibles).
+
+═══════════════════════════════════════════════════════════════════════
+ ÁRBOL
+═══════════════════════════════════════════════════════════════════════
+
+      27 líneas  .dockerignore
+      12 líneas  .editorconfig
+      74 líneas  .env.example
+     145 líneas  .github/workflows/ci.yml
+      89 líneas  .gitignore
+       6 líneas  .prettierignore
+       8 líneas  .prettierrc.json
+      49 líneas  PROJECT_MANIFEST.txt
+     275 líneas  README.md
+       7 líneas  apps/api/.migrationrc.json
+      58 líneas  apps/api/migrations/1721000000001_extensions-and-schema-grants.sql
+     159 líneas  apps/api/migrations/1721000000002_identity-and-audit.sql
+     118 líneas  apps/api/migrations/1721000000003_folio-counter.sql
+      43 líneas  apps/api/package.json
+       9 líneas  apps/api/src/application/README.md
+      70 líneas  apps/api/src/config/env.ts
+      59 líneas  apps/api/src/domain/folio/folio.ts
+      49 líneas  apps/api/src/index.ts
+      70 líneas  apps/api/src/infrastructure/postgres/db.ts
+     100 líneas  apps/api/src/infrastructure/postgres/numeric-guard.ts
+      94 líneas  apps/api/src/infrastructure/postgres/schema.ts
+     135 líneas  apps/api/src/presentation/http/errors.ts
+      53 líneas  apps/api/src/presentation/http/routes/health.ts
+     123 líneas  apps/api/src/presentation/http/server.ts
+      47 líneas  apps/api/tests/domain/folio.test.ts
+      89 líneas  apps/api/tests/env.test.ts
+     120 líneas  apps/api/tests/guards/audit-append-only.test.ts
+     148 líneas  apps/api/tests/guards/folio-concurrency.test.ts
+     113 líneas  apps/api/tests/guards/layer-boundaries.test.ts
+     154 líneas  apps/api/tests/guards/numeric.test.ts
+      87 líneas  apps/api/tests/health.test.ts
+      92 líneas  apps/api/tests/setup/postgres.ts
+      10 líneas  apps/api/tsconfig.json
+       9 líneas  apps/api/tsconfig.test.json
+      18 líneas  apps/api/vitest.config.ts
+      12 líneas  apps/web/index.html
+      23 líneas  apps/web/package.json
+      97 líneas  apps/web/src/App.tsx
+      13 líneas  apps/web/src/main.tsx
+     102 líneas  apps/web/src/styles.css
+       1 líneas  apps/web/src/vite-env.d.ts
+      16 líneas  apps/web/tsconfig.json
+      12 líneas  apps/web/vite.config.ts
+     109 líneas  docker-compose.yml
+     173 líneas  docs/EXCEL_LEGACY_BEHAVIOR.md
+     117 líneas  docs/LEGACY_BACKEND_EVIDENCE.md
+     180 líneas  docs/PHASE_1_STATUS.md
+     160 líneas  docs/ROUNDING_REGRESSION_CASES.md
+     132 líneas  docs/UF_LEGACY_BEHAVIOR.md
+     151 líneas  eslint.config.js
+      53 líneas  infra/docker/api.Dockerfile
+      54 líneas  infra/docker/postgres-initdb/00-bootstrap-roles.sh
+      26 líneas  infra/docker/web.Dockerfile
+      54 líneas  package.json
+      22 líneas  packages/shared-schemas/package.json
+      26 líneas  packages/shared-schemas/src/health.ts
+       8 líneas  packages/shared-schemas/src/index.ts
+       8 líneas  packages/shared-schemas/tsconfig.json
+      34 líneas  tsconfig.base.json
+      18 líneas  tsconfig.eslint.json
+       8 líneas  tsconfig.json
+
+═══════════════════════════════════════════════════════════════════════
+ MAPA RÁPIDO
+═══════════════════════════════════════════════════════════════════════
+
+  README.md                     Runbook (PowerShell y Bash). Empieza aquí.
+  docs/PHASE_1_STATUS.md        Qué está verificado y qué no. Desviaciones.
+  docs/LEGACY_BACKEND_EVIDENCE.md   Qué prueba back.zip. Riesgos.
+  docs/UF_LEGACY_BEHAVIOR.md    El «endpoint del SII» es un scrape de HTML.
+  docs/ROUNDING_REGRESSION_CASES.md  IVA y redondeos, aritmética verificada.
+  docs/EXCEL_LEGACY_BEHAVIOR.md Celdas exactas y variante AFP Habitat.
+
+  apps/api/migrations/          3 migraciones SQL (Up + Down)
+    ...001_extensions-and-schema-grants.sql   citext, permisos, updated_at
+    ...002_identity-and-audit.sql             app_role, app_user,
+                                              app_user_role, app_session,
+                                              audit_event (append-only)
+    ...003_folio-counter.sql                  folio_counter, reserve_folio(),
+                                              seed_folio_counter()
+
+  apps/api/tests/guards/        Las 4 guardias de la fase:
+    numeric.test.ts             NUMERIC nunca llega como number
+    audit-append-only.test.ts   la app no puede UPDATE/DELETE la auditoría
+    folio-concurrency.test.ts   50 reservas simultáneas, sin duplicados
+    layer-boundaries.test.ts    el dominio no importa nada
+
+  infra/docker/postgres-initdb/ Bootstrap de los dos roles de PostgreSQL
+  .github/workflows/ci.yml      install · lint · typecheck · tests · build
+
+═══════════════════════════════════════════════════════════════════════
+ PRIMEROS PASOS
+═══════════════════════════════════════════════════════════════════════
+
+   1.  cp .env.example .env      (Windows: Copy-Item .env.example .env)
+       Reemplaza los 3 'cambiar-en-local'.
+   2.  npm install               → commitea el package-lock.json
+   3.  npm run docker:up
+   4.  npm run db:migrate
+   5.  npm run verify
+   6.  curl localhost:3000/health
+
+   La Fase 2 no empieza sin aprobación explícita.
+═══════════════════════════════════════════════════════════════════════

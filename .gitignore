@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────────────
+# FactuFlow — .gitignore
+# Presente desde el PRIMER commit (criterio de término 11).
+#
+# Regla: este archivo es una barrera de seguridad, no una
+# conveniencia. Todo lo que aparece aquí puede contener datos
+# reales de clientes, credenciales o secretos.
+# Ver SECURITY_AND_TRACEABILITY.md §8.
+# ─────────────────────────────────────────────────────────────
+
+# --- Secretos y configuración local ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
+.secrets
+
+# --- Datos reales del sistema anterior: NUNCA en Git ---
+# Verificado en back.zip: contiene .env con SLACK_BOT_TOKEN, una base
+# SQLite con datos reales (+ WAL/SHM) y 13 Excel con clientes reales.
+# Ver docs/LEGACY_BACKEND_EVIDENCE.md §Riesgos.
+back.zip
+back/
+bdmaster.sql
+bdmaster*.sql
+seed.json
+seed.*.json
+*.dump
+*.backup
+dumps/
+master/
+
+# SQLite del sistema anterior — incluidos los archivos de journal, que
+# contienen datos aunque el .sqlite parezca "limpio".
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+storage/
+exports/
+
+# --- Excel reales de clientes: NUNCA en Git ---
+# Contienen razones sociales, RUT y montos reales.
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+*.csv
+# Excepción: golden files ficticios y aprobados (cuando existan).
+# Se habilitan uno a uno de forma explícita, nunca por patrón amplio.
+!apps/api/tests/golden/**/*.xlsx
+
+# --- Documentos e insumos con datos personales ---
+*.docx
+*.doc
+*.pdf
+uploads/
+insumos/
+
+# --- Node ---
+node_modules/
+dist/
+dist-types/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+.eslintcache
+npm-debug.log*
+yarn-error.log*
+.npm/
+
+# --- Editores y SO ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# --- Volúmenes y artefactos locales de Docker ---
+.docker-data/
+pgdata/

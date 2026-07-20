@@ -1,0 +1,109 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# FactuFlow — entorno de desarrollo local.
+#
+# Esta es la ÚNICA ruta documentada para levantar el proyecto. No existe un
+# segundo Compose: dos archivos que se contradicen es cómo un entorno deja de
+# ser reproducible.
+#
+#   npm run docker:up      levanta postgres + api + web
+#   npm run db:migrate     aplica las migraciones (desde el host, rol owner)
+#   npm run docker:down    detiene
+#   npm run docker:reset   detiene y BORRA el volumen (re-ejecuta el bootstrap)
+#
+# Las migraciones NO se ejecutan solas al arrancar el API. Es deliberado: una
+# migración que corre sola en cada despliegue es una migración que un día se
+# ejecuta cuando nadie miraba. Se invocan explícitamente.
+# ═══════════════════════════════════════════════════════════════════════════
+
+name: factuflow
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: factuflow-postgres
+    restart: unless-stopped
+    environment:
+      # Superusuario: sólo lo usa el bootstrap. Ni el API ni las migraciones.
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:?falta POSTGRES_SUPERUSER}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?falta POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_DB: postgres
+      # Consumidas por 00-bootstrap-roles.sh
+      FACTUFLOW_DB: ${POSTGRES_DB:?falta POSTGRES_DB}
+      FACTUFLOW_OWNER_USER: ${FACTUFLOW_OWNER_USER:?falta FACTUFLOW_OWNER_USER}
+      FACTUFLOW_OWNER_PASSWORD: ${FACTUFLOW_OWNER_PASSWORD:?falta FACTUFLOW_OWNER_PASSWORD}
+      FACTUFLOW_APP_USER: ${FACTUFLOW_APP_USER:?falta FACTUFLOW_APP_USER}
+      FACTUFLOW_APP_PASSWORD: ${FACTUFLOW_APP_PASSWORD:?falta FACTUFLOW_APP_PASSWORD}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - factuflow-pgdata:/var/lib/postgresql/data
+      # Sólo lectura: el contenedor no debe poder alterar su propio bootstrap.
+      - ./infra/docker/postgres-initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Contra la base REAL y con el rol REAL de la app: comprobar `postgres`
+      # con el superusuario diría "listo" aunque el bootstrap hubiera fallado.
+      test: ['CMD-SHELL', 'pg_isready -U "$$FACTUFLOW_APP_USER" -d "$$FACTUFLOW_DB" -h 127.0.0.1']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks: [factuflow-net]
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    container_name: factuflow-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      API_HOST: 0.0.0.0
+      API_PORT: 3000
+      # ⚠️ SÓLO la URL del rol de aplicación. La del owner NO entra aquí: si
+      # entrara, el API podría alterar audit_event y el append-only sería falso
+      # (T-13). El host es `postgres`, el nombre del servicio en esta red.
+      DATABASE_URL_APP: postgresql://${FACTUFLOW_APP_USER}:${FACTUFLOW_APP_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+    ports:
+      - '${API_PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:3000/health'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [factuflow-net]
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+    container_name: factuflow-web
+    restart: unless-stopped
+    environment:
+      # La consume el NAVEGADOR, no el contenedor: por eso `localhost` y no
+      # `api`. Confundir ambos es el error clásico de este archivo.
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+      WEB_PORT: 5173
+    ports:
+      - '${WEB_PORT:-5173}:5173'
+    depends_on:
+      - api
+    networks: [factuflow-net]
+
+volumes:
+  factuflow-pgdata:
+    name: factuflow-pgdata
+
+networks:
+  factuflow-net:
+    name: factuflow-net
+    driver: bridge

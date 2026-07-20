@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un push nuevo cancela la corrida anterior de la misma rama: no tiene sentido
+# gastar minutos verificando un commit que ya quedó atrás.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # Comprobaciones estáticas: rápidas y sin Docker. Si esto falla, no vale la
+  # pena levantar contenedores.
+  # ───────────────────────────────────────────────────────────────────────────
+  static:
+    name: Formato, lint y tipos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # `npm ci` exige package-lock.json. Ver README §Estado: el lockfile se
+      # genera en el primer `npm install` local y se commitea.
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Formato
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Pruebas unitarias: dominio puro, entorno y límites entre capas.
+  # Sin base de datos, sin contenedores. Segundos.
+  # ───────────────────────────────────────────────────────────────────────────
+  unit:
+    name: Pruebas unitarias
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace @factuflow/shared-schemas
+      - run: npm run test:unit
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Pruebas de integración: PostgreSQL 16 REAL vía Testcontainers.
+  #
+  # No se usa `services:` de GitHub Actions a propósito. Testcontainers levanta
+  # el contenedor desde el propio test, que es exactamente lo que ocurre en la
+  # máquina de quien desarrolla: un solo camino, no dos que se desincronizan.
+  # El runner de Ubuntu ya trae Docker.
+  # ───────────────────────────────────────────────────────────────────────────
+  integration:
+    name: Pruebas de integración (PostgreSQL real)
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      - name: Precargar la imagen de PostgreSQL
+        # Explícito para que, si el registro falla, el error diga eso y no
+        # aparezca como un timeout misterioso dentro de una prueba.
+        run: docker pull postgres:16-alpine
+
+      - run: npm run build --workspace @factuflow/shared-schemas
+
+      - name: Guardias contra PostgreSQL real
+        # Cubre: NUMERIC nunca es number, auditoría append-only, el rol de
+        # aplicación no es dueño de nada, y concurrencia del contador de folios.
+        run: npm run test:integration
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Build: lo último. Que compile no sirve de nada si las guardias fallaron.
+  # ───────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [unit, integration]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Higiene de secretos: barata y atrapa el error más caro del proyecto.
+  # ───────────────────────────────────────────────────────────────────────────
+  secrets-hygiene:
+    name: Ningún dato real en el repositorio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Buscar archivos que jamás deben estar versionados
+        run: |
+          set -euo pipefail
+          # Archivos concretos vistos en back.zip (.env con SLACK_BOT_TOKEN,
+          # SQLite de producción, Excel con clientes reales). Ver
+          # docs/LEGACY_BACKEND_EVIDENCE.md §1.
+          encontrados=$(git ls-files | grep -iE \
+            '(^|/)\.env$|(^|/)back\.zip$|bdmaster.*\.sql$|(^|/)seed\.json$|\.sqlite|\.db-(wal|shm)$|\.xlsx?$' \
+            || true)
+          if [ -n "$encontrados" ]; then
+            echo "::error::Archivos sensibles versionados:"
+            echo "$encontrados"
+            exit 1
+          fi
+          echo "OK: sin archivos sensibles versionados."
+
+      - name: Verificar que .gitignore mantiene sus barreras
+        run: |
+          set -euo pipefail
+          for patron in '.env' 'back.zip' 'bdmaster.sql' 'seed.json' '*.sqlite' '*.xlsx'; do
+            grep -qxF "$patron" .gitignore || {
+              echo "::error::.gitignore perdió el patrón: $patron"; exit 1; }
+          done
+          echo "OK: .gitignore íntegro."

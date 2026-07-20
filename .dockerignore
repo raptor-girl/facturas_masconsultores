@@ -1,0 +1,29 @@
+# El contexto de build no necesita nada de esto, y varios NO deben salir del
+# equipo: reducir el contexto es tambien reducir la superficie de fuga.
+node_modules
+**/node_modules
+dist
+**/dist
+**/dist-types
+build
+coverage
+*.tsbuildinfo
+**/*.tsbuildinfo
+.git
+.github
+.env
+.env.*
+!.env.example
+back.zip
+bdmaster.sql
+seed.json
+*.sqlite
+*.sqlite-*
+*.xlsx
+*.xls
+*.docx
+storage/
+docs/
+README.md
+.vscode
+.idea

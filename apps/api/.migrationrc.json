@@ -1,0 +1,7 @@
+{
+  "migrations-dir": "migrations",
+  "migrations-table": "pgmigrations",
+  "database-url-var": "DATABASE_URL_OWNER",
+  "check-order": true,
+  "verbose": true
+}

@@ -1,0 +1,49 @@
+{
+  "name": "factuflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FactuFlow V1 - Solicitudes de Factura. Fase 1: fundaciones tecnicas.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --workspace @factuflow/api",
+    "dev:web": "npm run dev --workspace @factuflow/web",
+    "build": "tsc --build && npm run build --workspace @factuflow/web",
+    "typecheck": "tsc --build --force && tsc -p apps/api/tsconfig.test.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test --workspace @factuflow/api",
+    "test:unit": "npm run test:unit --workspace @factuflow/api",
+    "test:integration": "npm run test:integration --workspace @factuflow/api",
+    "db:migrate": "npm run db:migrate --workspace @factuflow/api",
+    "db:rollback": "npm run db:rollback --workspace @factuflow/api",
+    "db:status": "npm run db:status --workspace @factuflow/api",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:reset": "docker compose down -v",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm test",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "concurrently": "^9.0.1",
+    "eslint": "^9.13.0",
+    "eslint-import-resolver-typescript": "^3.6.3",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.11.0"
+  }
+}
