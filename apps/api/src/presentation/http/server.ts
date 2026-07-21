@@ -31,12 +31,17 @@ import {
   PostgresUfService,
 } from '../../infrastructure/postgres/uf-service.js';
 import { registerUfCalculationRoutes } from './routes/uf-calculations.js';
+import type { InvoiceWorkbookRenderer } from '../../application/invoice-requests/invoice-request-service.js';
+import { TechnicalInvoiceWorkbookRenderer } from '../../infrastructure/excel/technical-invoice-workbook.js';
+import { PostgresInvoiceRequestService } from '../../infrastructure/postgres/invoice-request-service.js';
+import { registerInvoiceRequestRoutes } from './routes/invoice-requests.js';
 
 export interface BuildServerOptions {
   readonly env: Env;
   readonly db: Kysely<Database>;
   readonly version: string;
   readonly ufProviders?: readonly UfProvider[];
+  readonly invoiceWorkbookRenderer?: InvoiceWorkbookRenderer;
 }
 
 /**
@@ -55,6 +60,7 @@ export async function buildServer({
   db,
   version,
   ufProviders,
+  invoiceWorkbookRenderer,
 }: BuildServerOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
@@ -105,6 +111,13 @@ export async function buildServer({
     origin: env.CORS_ORIGINS,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    exposedHeaders: [
+      'content-disposition',
+      'x-invoice-request-id',
+      'x-invoice-folio',
+      'x-export-sha256',
+      'x-request-id',
+    ],
   });
 
   await app.register(fastifyRateLimit, {
@@ -144,7 +157,8 @@ export async function buildServer({
     openapi: {
       info: {
         title: 'FactuFlow API',
-        description: 'FactuFlow. Fase 4: autenticación, maestros, valores UF y cálculos.',
+        description:
+          'FactuFlow. Fase 5: autenticación, maestros, UF, cálculos y solicitudes exportadas.',
         version,
       },
       tags: [
@@ -153,6 +167,10 @@ export async function buildServer({
         { name: 'administración', description: 'Usuarios, roles, sesiones y auditoría' },
         { name: 'maestros', description: 'Consulta de maestros de facturación' },
         { name: 'UF y cálculos', description: 'Valores UF y previsualización no persistente' },
+        {
+          name: 'solicitudes de factura',
+          description: 'Exportación final, historial, detalle, descarga y duplicación en memoria',
+        },
       ],
     },
     transform: jsonSchemaTransform,
@@ -181,6 +199,15 @@ export async function buildServer({
     identity,
     uf,
     calculations: new PostgresInvoicePreviewService(db, uf),
+  });
+  registerInvoiceRequestRoutes(app, {
+    env,
+    identity,
+    invoiceRequests: new PostgresInvoiceRequestService(
+      db,
+      uf,
+      invoiceWorkbookRenderer ?? new TechnicalInvoiceWorkbookRenderer(),
+    ),
   });
 
   return app;

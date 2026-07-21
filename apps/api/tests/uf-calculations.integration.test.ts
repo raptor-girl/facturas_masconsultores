@@ -437,12 +437,19 @@ describe('UF y previsualización tributaria', () => {
     });
     expect(exempt.json()).toMatchObject({ ivaClp: '0', totalClp: '40543', ufSource: null });
     expect(await db.selectFrom('folio_counter').selectAll().execute()).toEqual(folioBefore);
-    const requestTables = await sql<{ table_name: string }>`
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name LIKE '%request%'
+    const persisted = await sql<{
+      requests: number;
+      lines: number;
+      receivers: number;
+      exports: number;
+    }>`
+      SELECT
+        (SELECT count(*)::integer FROM invoice_request) AS requests,
+        (SELECT count(*)::integer FROM invoice_request_line) AS lines,
+        (SELECT count(*)::integer FROM invoice_request_receiver) AS receivers,
+        (SELECT count(*)::integer FROM invoice_export) AS exports
     `.execute(db);
-    expect(requestTables.rows).toEqual([]);
+    expect(persisted.rows).toEqual([{ requests: 0, lines: 0, receivers: 0, exports: 0 }]);
   });
 
   it('rechaza CP inexistente, inactivo y de clientes diferentes', async () => {

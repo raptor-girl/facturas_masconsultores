@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect, sql } from 'kysely';
+import { Kysely, PostgresDialect, sql, type Transaction } from 'kysely';
 import pg from 'pg';
 import type { Database } from './schema.js';
 import { assertNumericParsersUntouched } from './numeric-guard.js';
@@ -50,13 +50,15 @@ export async function pingDatabase(db: Kysely<Database>): Promise<number> {
  * Vive en infraestructura y no en el dominio porque su correccion depende del
  * bloqueo de fila de PostgreSQL, no de una regla de negocio.
  *
- * Fase 1: la funcion existe y se prueba bajo concurrencia, pero NADIE la llama
- * todavia — la creacion de solicitudes esta fuera del alcance aprobado. Se deja
- * preparada porque el orden correcto (reservar ANTES de generar el Excel, dentro
- * de la misma transaccion — T-08/R-06) condiciona el disenio de la Fase 4, y
- * descubrirlo entonces seria tarde.
+ * Fase 5: el XLSX se genera y valida primero, sin escribir en PostgreSQL. La
+ * reserva se ejecuta despues dentro de la transaccion final que persiste la
+ * solicitud, sus snapshots, el BYTEA y la auditoria. Cualquier fallo posterior
+ * revierte tambien el contador; abrir o duplicar nunca llama esta funcion.
  */
-export async function reserveFolio(db: Kysely<Database>, year: number): Promise<number> {
+export async function reserveFolio(
+  db: Kysely<Database> | Transaction<Database>,
+  year: number,
+): Promise<number> {
   const result = await sql<{ reserve_folio: number }>`
     SELECT reserve_folio(${year}) AS reserve_folio
   `.execute(db);

@@ -179,3 +179,15 @@ De los **13 Excel** en `back/storage/exports/` (**no copiados** al repositorio: 
 | **D-10**  | ¿El estilo es contractual o cosmético?                                       | Negocio                                  |
 | **E-01**  | ¿Por qué se borra la fila 6?                                                 | Requiere abrir la plantilla              |
 | **E-02**  | ¿La fecha del Excel debe ser `uf_fecha`, `billing_date` o la de exportación? | Negocio — ver `UF_LEGACY_BEHAVIOR.md` §4 |
+
+---
+
+## 8. Implementación de Fase 5
+
+La Fase 5 automatiza el mapa funcional conocido con `@excel.js/exceljs`, pero **no declara equivalencia visual final**. El archivo `templates/solicitud-factura-ejemplo.xlsx` mencionado por la evidencia legacy no está presente en este repositorio, por lo que se genera `TECHNICAL_V1_UNAPPROVED` con una advertencia visible y datos ficticios en pruebas.
+
+Se conservan y prueban `C4`, `C5`, `C8:C18`, `C20`, líneas CP desde fila 21, offsets, múltiples receptores, HES `N/A` y las variantes `STANDARD`/`HABITAT`. Los montos provienen de `LEGACY_V1` y se escriben como fórmulas constantes con resultado exacto; no se recalcula ni consulta UF durante la descarga. El folio no se imprime dentro del workbook ni en el nombre; un sufijo derivado del ID de exportación evita colisiones sin alterar la planilla.
+
+El XLSX se genera/reabre en memoria antes de la transacción y se rechaza si excede 5 MiB, no es un ZIP XLSX válido, cambia las celdas críticas, contiene macros, conexiones o vínculos externos. Todo texto de usuario que comienza con `=`, `+`, `-` o `@` se neutraliza para evitar formula injection. El BYTEA validado se almacena con SHA-256 y toda descarga posterior devuelve exactamente esos bytes.
+
+Pendiente para aprobación visual: obtener una plantilla oficial libre de datos reales, definir si el estilo es contractual y resolver E-01/E-02. Hasta entonces, la funcionalidad transaccional es verificable, pero el arte final debe considerarse observado.

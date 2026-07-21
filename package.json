@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
-  "description": "FactuFlow V1 - Fase 4: valores UF y calculos tributarios.",
+  "description": "FactuFlow V1 - Fase 5: solicitudes exportadas y Excel transaccional.",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.0.0",

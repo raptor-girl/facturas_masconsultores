@@ -1,4 +1,4 @@
-# Arquitectura — Fases 2, 3 y 4
+# Arquitectura — Fases 2 a 5
 
 ## Límites
 
@@ -57,3 +57,23 @@ El cliente HTTP de infraestructura limita timeout, reintentos con backoff, redir
 `calculateInvoiceAmounts` es puro y versionado como `LEGACY_V1`: recibe fecha, valor UF, tratamiento, tasa y líneas. Convierte y redondea cada CP/MS con `ROUND_HALF_UP` antes de sumar; el IVA afecto usa Decimal y `ROUND_CEIL` al siguiente múltiplo de $10. No consulta base, red, reloj ni folios. El servicio de aplicación valida existencia, actividad y cliente común de los CP/MS.
 
 La recarga administrativa y sus eventos `UF_VALUE_REFRESHED`/`UF_VALUE_CHANGED` comparten transacción con el cambio. Si falla la auditoría, el valor anterior permanece. Una previsualización no es un evento de solicitud y no se audita como tal.
+
+## Solicitud exportada e inmutable
+
+`invoice_request` representa sólo una solicitud ya exportada. El único estado permitido es `EXPORTED`; no existen tablas ni endpoints de borrador. Sus datos legales, emisor, responsable, regla, CP/producto y receptores se congelan en columnas y snapshots versionados. Cambiar un maestro después no altera el detalle ni el documento histórico.
+
+La secuencia separa trabajo fallable de la transacción corta:
+
+1. validar contrato, permisos, documentos, maestros activos/completos y UF exacta;
+2. calcular exclusivamente con `LEGACY_V1`;
+3. generar y reabrir el XLSX completamente en memoria, validar celdas, fórmulas, tamaño y ausencia de macros/vínculos externos;
+4. abrir transacción, tomar advisory lock por usuario e idempotency key, releer maestros/UF con lock compartido y detectar cambios;
+5. reservar el folio anual con `reserve_folio()`;
+6. insertar solicitud, líneas, receptores, `invoice_export` y `INVOICE_REQUEST_EXPORTED`;
+7. commit y entrega de los mismos bytes.
+
+Un fallo en los pasos 4–6 revierte incluso el contador. `Idempotency-Key` es único por usuario y se vincula al SHA-256 del payload canónico: el mismo payload devuelve folio/archivo existentes; uno distinto responde 409. La apertura, previsualización, historial y precarga de duplicación no escriben ni reservan folios.
+
+`invoice_export` conserva el XLSX exacto como `BYTEA`, MIME, tamaño, SHA-256 y versión de plantilla. La descarga no regenera el archivo. El rol `factuflow_app` sólo tiene SELECT/INSERT sobre las cuatro tablas de Fase 5; no puede UPDATE, DELETE ni TRUNCATE. `factuflow_owner` mantiene ownership.
+
+La implementación usa `@excel.js/exceljs` y una plantilla técnica marcada `TECHNICAL_V1_UNAPPROVED`. El mapa funcional `STANDARD`/`HABITAT` está automatizado, pero la fidelidad visual contra la plantilla histórica sigue bloqueada porque `templates/solicitud-factura-ejemplo.xlsx` no está disponible en el repositorio.

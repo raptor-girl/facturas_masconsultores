@@ -1,4 +1,4 @@
-# Runbook operativo — Fases 2, 3 y 4
+# Runbook operativo — Fases 2 a 5
 
 ## Puesta en marcha
 
@@ -94,3 +94,24 @@ Diagnóstico:
 - 422 `PROJECT_CENTER_INACTIVE`/`PROJECT_CENTER_CLIENT_MISMATCH`: input de previsualización no utilizable.
 
 Nunca cambie manualmente una UF con el rol de aplicación. Para investigar, correlacione `requestId` con `UF_VALUE_FETCHED`, `UF_VALUE_REFRESHED`, `UF_VALUE_CHANGED` y `UF_PROVIDER_FAILED`; la auditoría no guarda HTML ni respuestas externas completas.
+
+## Operación de solicitudes exportadas
+
+- `/solicitudes/nueva`: prepara en memoria y sólo crea al pulsar **Exportar Excel y guardar solicitud**.
+- `/solicitudes`: historial paginado y filtros por texto, cliente, responsable, período y fecha.
+- `/solicitudes/:id`: detalle inmutable, descarga del BYTEA exacto y acción Duplicar.
+- `/solicitudes/:id/duplicar`: precarga un formulario nuevo; no reutiliza folio, id, exportación ni montos finales.
+
+La exportación requiere `Idempotency-Key`. El frontend genera una clave por intento lógico y la conserva durante reintentos/doble clic. Si llega la misma clave con el mismo payload, el API devuelve el mismo folio y los mismos bytes; con un payload distinto responde 409 `IDEMPOTENCY_KEY_REUSED`.
+
+Diagnóstico:
+
+- 409 `UF_VALUE_CHANGED` o `MASTER_DATA_CHANGED`: recargar el formulario y confirmar los datos vigentes;
+- 422 por OC/HES/contrato: completar el documento obligatorio indicado por la regla del cliente;
+- 422 por maestro inactivo/incompleto: activar/corregir el maestro antes de exportar;
+- 500 durante XLSX, persistencia o auditoría: no rearmar manualmente el folio; repetir con la misma idempotency key después de corregir la causa;
+- descarga histórica: validar el header `X-Export-Sha256` si se requiere comprobar integridad.
+
+No hay archivos temporales en disco ni directorio `storage/exports`; el XLSX vive en PostgreSQL. Para investigar use `requestId`, `INVOICE_REQUEST_EXPORTED` e `INVOICE_EXPORT_DOWNLOADED`. Nunca registre el body completo, la idempotency key ni el BYTEA.
+
+La plantilla actual es técnica y lleva una marca visible. Antes de aprobación visual de producción debe incorporarse una plantilla oficial ficticia/sin datos personales y actualizar su versión; no use como golden files los Excel históricos reales.

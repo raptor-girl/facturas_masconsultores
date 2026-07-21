@@ -5,6 +5,9 @@
     "lib": ["ES2023"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "paths": {
+      "@excel.js/exceljs": ["./node_modules/@excel.js/exceljs/index.d.ts"]
+    },
 
     "strict": true,
     "noImplicitOverride": true,

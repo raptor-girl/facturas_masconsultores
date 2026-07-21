@@ -1,16 +1,10 @@
 import type { Generated, ColumnType } from 'kysely';
 
 /**
- * Tipos de la base para Kysely — Fase 1 únicamente.
+ * Tipos de PostgreSQL para Kysely.
  *
- * Solo las tablas de fundación. `invoice_request`, `client`, `receiver`,
- * `project_center` y `product` NO están aquí a propósito: están fuera del
- * alcance aprobado y no se adelantan con supuestos.
- *
- * Convención de tipos monetarios: cuando lleguen (Fase 3+), toda columna
- * NUMERIC se declara `string` en este archivo, nunca `number`. Kysely no
- * convierte nada por sí mismo: refleja lo que entrega el driver, y el driver
- * entrega string. Ver numeric-guard.ts.
+ * Toda columna NUMERIC se declara `string`, nunca `number`. Kysely refleja lo
+ * que entrega node-postgres y numeric-guard impide registrar parsers binarios.
  */
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
@@ -228,6 +222,87 @@ export interface UfValueTable {
   metadata: JsonValue | null;
 }
 
+export interface InvoiceRequestTable {
+  id: Generated<string>;
+  folio: string;
+  status: Generated<'EXPORTED'>;
+  source_request_id: string | null;
+  idempotency_key: string;
+  payload_hash: string;
+  client_id: string;
+  issuer_company_id: string;
+  coordinator_profile_id: string;
+  period: string;
+  request_date: DateOnly;
+  billing_date: DateOnly;
+  uf_date: DateOnly;
+  uf_value: string;
+  uf_source: UfSource;
+  tax_treatment: TaxTreatment;
+  iva_rate: string;
+  net_clp: string;
+  iva_clp: string;
+  total_clp: string;
+  area: Generated<'Plataformas'>;
+  purchase_order_number: string | null;
+  contract_number: string | null;
+  hes_number: string | null;
+  supplier_number: string | null;
+  description: string;
+  observations: string | null;
+  calculation_algorithm_version: 'LEGACY_V1';
+  excel_template_variant: ExcelTemplateVariant;
+  excel_template_version: string;
+  client_snapshot: JsonValue;
+  issuer_company_snapshot: JsonValue;
+  coordinator_snapshot: JsonValue;
+  invoice_rule_snapshot: JsonValue;
+  exported_at: Timestamp;
+  created_by: string;
+  created_at: Timestamp;
+}
+
+export interface InvoiceRequestLineTable {
+  id: Generated<string>;
+  invoice_request_id: string;
+  position: number;
+  project_center_id: string;
+  project_center_code: string;
+  project_name: string;
+  project_center_type: ProjectCenterType;
+  product_id: string;
+  product_code: string | null;
+  product_name: string;
+  uf_amount: string;
+  uf_value: string;
+  clp_amount: string;
+  created_at: Timestamp;
+}
+
+export interface InvoiceRequestReceiverTable {
+  id: Generated<string>;
+  invoice_request_id: string;
+  position: number;
+  receiver_id: string | null;
+  display_name: string | null;
+  email: string;
+  created_at: Timestamp;
+}
+
+export interface InvoiceExportTable {
+  id: Generated<string>;
+  invoice_request_id: string;
+  content: Buffer;
+  filename: string;
+  mime_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  /** BIGINT: node-postgres lo devuelve como string por diseño. */
+  size_bytes: string;
+  sha256: string;
+  template_variant: ExcelTemplateVariant;
+  template_version: string;
+  created_at: Timestamp;
+}
+
 export interface Database {
   app_role: AppRoleTable;
   app_user: AppUserTable;
@@ -244,4 +319,8 @@ export interface Database {
   product: ProductTable;
   project_center: ProjectCenterTable;
   uf_value: UfValueTable;
+  invoice_request: InvoiceRequestTable;
+  invoice_request_line: InvoiceRequestLineTable;
+  invoice_request_receiver: InvoiceRequestReceiverTable;
+  invoice_export: InvoiceExportTable;
 }

@@ -9,6 +9,11 @@ import { api, ApiError } from './api.js';
 import { AuthProvider, useAuth } from './auth.js';
 import { ClientsPage, ProjectCentersPage, SimpleMastersPage } from './MasterPages.js';
 import { CalculationPreview } from './CalculationPreview.js';
+import {
+  InvoiceRequestDetailPage,
+  InvoiceRequestForm,
+  InvoiceRequestHistory,
+} from './InvoiceRequests.js';
 
 function usePath(): [string, (path: string) => void] {
   const [path, setPath] = useState(window.location.pathname);
@@ -192,6 +197,7 @@ function Shell({
         <nav aria-label="Navegación principal">
           <button onClick={() => navigate('/')}>Inicio</button>
           <button onClick={() => navigate('/mi-cuenta')}>Mi cuenta</button>
+          <button onClick={() => navigate('/solicitudes')}>Solicitudes</button>
           <button onClick={() => navigate('/herramientas/calculo')}>Cálculo técnico</button>
           {user?.roles.includes('ADMIN') && (
             <>
@@ -227,9 +233,9 @@ function Dashboard(): JSX.Element {
     <>
       <div className="page-title">
         <div>
-          <p className="eyebrow">Fase 2</p>
+          <p className="eyebrow">Fase 5</p>
           <h1>Hola, {user?.displayName}</h1>
-          <p>Autenticación y administración de acceso están operativas.</p>
+          <p>Maestros, UF, cálculo y solicitudes exportadas están operativos.</p>
         </div>
       </div>
       <section className="panel">
@@ -650,9 +656,19 @@ function RoutedApp(): JSX.Element {
     navigate('/');
     return <></>;
   }
+  const duplicateMatch = /^\/solicitudes\/([0-9a-f-]{36})\/duplicar$/i.exec(path);
+  const detailMatch = /^\/solicitudes\/([0-9a-f-]{36})$/i.exec(path);
   const content =
     path === '/mi-cuenta' ? (
       <Account />
+    ) : path === '/solicitudes' ? (
+      <InvoiceRequestHistory navigate={navigate} />
+    ) : path === '/solicitudes/nueva' ? (
+      <InvoiceRequestForm navigate={navigate} />
+    ) : duplicateMatch?.[1] ? (
+      <InvoiceRequestForm sourceId={duplicateMatch[1]} navigate={navigate} />
+    ) : detailMatch?.[1] ? (
+      <InvoiceRequestDetailPage id={detailMatch[1]} navigate={navigate} />
     ) : path === '/herramientas/calculo' ? (
       <CalculationPreview />
     ) : path === '/cambiar-contrasena' ? (

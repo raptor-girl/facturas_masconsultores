@@ -5,9 +5,14 @@ import { api } from './api.js';
 interface Props {
   readonly onSelect: (client: Client) => void;
   readonly label?: string;
+  readonly completeOnly?: boolean;
 }
 
-export function ClientAutocomplete({ onSelect, label = 'Buscar cliente' }: Props): JSX.Element {
+export function ClientAutocomplete({
+  onSelect,
+  label = 'Buscar cliente',
+  completeOnly = false,
+}: Props): JSX.Element {
   const listId = useId();
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<Client[]>([]);
@@ -29,7 +34,11 @@ export function ClientAutocomplete({ onSelect, label = 'Buscar cliente' }: Props
       })
         .then((result) => {
           if (current !== sequence.current) return;
-          setItems(result.items);
+          setItems(
+            completeOnly
+              ? result.items.filter((client) => client.isActive && client.dataStatus === 'COMPLETE')
+              : result.items,
+          );
           setOpen(true);
           setActive(result.items.length ? 0 : -1);
         })
@@ -41,7 +50,7 @@ export function ClientAutocomplete({ onSelect, label = 'Buscar cliente' }: Props
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [completeOnly, query]);
 
   const choose = (client: Client) => {
     setQuery(client.shortName);

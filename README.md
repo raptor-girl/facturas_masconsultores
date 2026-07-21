@@ -2,7 +2,7 @@
 
 Sistema de Solicitudes de Factura. Reemplaza el sistema anterior de MAS.
 
-**Estado: Fase 4 — valores UF y cálculo tributario.** Autenticación, trazabilidad y maestros siguen operativos; existe consulta UF con caché/fallback y previsualización exacta no persistente. No hay solicitudes ni Excel. Ver `docs/PHASE_4_STATUS.md`.
+**Estado: Fase 5 — solicitudes exportadas y Excel transaccional.** Una solicitud nace únicamente al exportar un XLSX validado; queda inmutable con snapshots, folio y archivo exacto en PostgreSQL. No existen borradores. Ver `docs/PHASE_5_STATUS.md`.
 
 ---
 
@@ -255,7 +255,7 @@ Dos defectos del sistema anterior que aquí no existen:
 
 `reserve_folio` es `SECURITY DEFINER`: la aplicación reserva folios pero **no puede tocar el contador** directamente.
 
-**Ningún flujo actual lo llama.** Existe, está probado bajo concurrencia (50 reservas simultáneas) y espera a la fase de solicitudes.
+La Fase 5 lo invoca sólo dentro de la transacción final de exportación. Abrir el formulario, previsualizar o duplicar en memoria no reserva nada. Un fallo de persistencia o auditoría revierte también el contador.
 
 ---
 
@@ -273,6 +273,12 @@ El motor puro `LEGACY_V1` aplica esta secuencia:
 
 Todos los decimales cruzan API y PostgreSQL como `string`; el dominio usa `decimal.js`. La herramienta protegida `/herramientas/calculo` sólo previsualiza: no persiste solicitudes ni reserva folios.
 
+## Solicitudes exportadas y Excel
+
+No hay estado borrador. `POST /invoice-requests/export` exige sesión ADMIN/COORDINATOR, CSRF e `Idempotency-Key`; revalida maestros y UF, reutiliza `LEGACY_V1`, genera y valida el XLSX en memoria y recién entonces abre la transacción que reserva folio, inserta snapshots/líneas/receptores, almacena el `BYTEA` con SHA-256 y audita. Si algo falla, no existe solicitud y el folio no se consume.
+
+El historial está en `/solicitudes`; `/solicitudes/nueva` crea y descarga, el detalle es inmutable y duplicar sólo precarga un formulario nuevo en memoria. El archivo almacenado se descarga byte por byte, sin regenerarlo. La plantilla disponible es `TECHNICAL_V1_UNAPPROVED`: reproduce el mapa de celdas y las variantes `STANDARD`/`HABITAT`, pero la comparación visual final queda pendiente porque la plantilla histórica aprobada no está en este repositorio.
+
 ---
 
 ## Documentación
@@ -283,6 +289,7 @@ Todos los decimales cruzan API y PostgreSQL como `string`; el dominio usa `decim
 | `docs/PHASE_2_STATUS.md`            | Estado, pruebas y límites de autenticación          |
 | `docs/PHASE_3_STATUS.md`            | Estado y límites de maestros de facturación         |
 | `docs/PHASE_4_STATUS.md`            | Estado y límites de UF y motor tributario           |
+| `docs/PHASE_5_STATUS.md`            | Solicitudes inmutables, transacción y XLSX          |
 | `docs/ARCHITECTURE.md`              | Identidad, sesiones, maestros y auditoría           |
 | `docs/RUNBOOK.md`                   | Operación segura de usuarios y maestros             |
 | `docs/LEGACY_BACKEND_EVIDENCE.md`   | Qué prueba `back.zip`. Incluye riesgos de seguridad |
@@ -306,6 +313,6 @@ Ningún `password_hash` del sistema anterior se migra. Nunca.
 
 ## Qué NO hay todavía
 
-Solicitudes persistidas, duplicación, aplicación de folios a solicitudes, Excel, documentos exportados, importación de `bdmaster.sql`, datos históricos, proyecciones, Slack ni solicitudes programadas.
+Borradores, edición o eliminación de solicitudes, estados distintos de `EXPORTED`, aprobación/rechazo, envío de correos, exportación de órdenes de compra, almacenamiento externo, importación de `bdmaster.sql`, datos históricos, proyecciones, Slack ni solicitudes programadas.
 
 Todo eso llega en fases posteriores, **con aprobación explícita**. Ver `docs/PHASE_1_STATUS.md`.
