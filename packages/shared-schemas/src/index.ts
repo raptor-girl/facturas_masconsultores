@@ -37,3 +37,5 @@ export {
   type UpdateRolesRequest,
   type TemporaryPasswordResult,
 } from './auth.js';
+
+export * from './masters.js';

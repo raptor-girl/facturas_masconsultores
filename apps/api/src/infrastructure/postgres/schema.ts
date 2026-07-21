@@ -111,6 +111,107 @@ export interface FolioCounterTable {
   updated_at: Timestamp;
 }
 
+export type TaxTreatment = 'AFFECTED' | 'EXEMPT';
+export type DataStatus = 'COMPLETE' | 'PENDING_COMPLETION';
+export type DocumentRequirement = 'REQUIRED' | 'OPTIONAL' | 'NOT_APPLICABLE';
+export type ExcelTemplateVariant = 'STANDARD' | 'HABITAT';
+export type ProjectCenterType = 'ADMINISTRATION_OPERATION' | 'DEVELOPMENT_HOURS' | 'CONSTRUCTION';
+
+export interface IssuerCompanyTable {
+  id: Generated<string>;
+  code: string;
+  legal_name: string;
+  tax_id: string;
+  business_activity: string;
+  address: string;
+  is_active: Generated<boolean>;
+  default_tax_treatment: TaxTreatment;
+  /** NUMERIC(5,4): se conserva exacto como string. */
+  default_iva_rate: string;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  created_by: string | null;
+}
+
+export interface CoordinatorProfileTable {
+  id: Generated<string>;
+  app_user_id: string | null;
+  display_name: string;
+  email: string | null;
+  is_active: Generated<boolean>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  created_by: string | null;
+}
+
+export interface ClientTable {
+  id: Generated<string>;
+  short_name: string;
+  legal_name: string | null;
+  tax_id: string | null;
+  business_activity: string | null;
+  address: string | null;
+  default_coordinator_profile_id: string | null;
+  data_status: DataStatus;
+  is_active: Generated<boolean>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  created_by: string | null;
+  updated_by: string | null;
+}
+
+export interface ClientInvoiceRuleTable {
+  client_id: string;
+  purchase_order_requirement: DocumentRequirement;
+  hes_requirement: DocumentRequirement;
+  contract_requirement: DocumentRequirement;
+  supplier_number: string | null;
+  default_issuer_company_id: string | null;
+  default_tax_treatment: TaxTreatment | null;
+  excel_template_variant: ExcelTemplateVariant;
+  billing_notes: string | null;
+  is_active: Generated<boolean>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  created_by: string | null;
+  updated_by: string | null;
+}
+
+export interface ReceiverTable {
+  id: Generated<string>;
+  client_id: string;
+  display_name: string | null;
+  email: string;
+  is_active: Generated<boolean>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  created_by: string | null;
+}
+
+export interface ProductTable {
+  id: Generated<string>;
+  code: string | null;
+  name: string;
+  normalized_name: string;
+  is_active: Generated<boolean>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  created_by: string | null;
+}
+
+export interface ProjectCenterTable {
+  id: Generated<string>;
+  client_id: string;
+  product_id: string;
+  code: string;
+  project_name: string;
+  project_center_type: ProjectCenterType;
+  is_active: Generated<boolean>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  created_by: string | null;
+}
+
 export interface Database {
   app_role: AppRoleTable;
   app_user: AppUserTable;
@@ -119,4 +220,11 @@ export interface Database {
   audit_event: AuditEventTable;
   login_attempt: LoginAttemptTable;
   folio_counter: FolioCounterTable;
+  issuer_company: IssuerCompanyTable;
+  coordinator_profile: CoordinatorProfileTable;
+  client: ClientTable;
+  client_invoice_rule: ClientInvoiceRuleTable;
+  receiver: ReceiverTable;
+  product: ProductTable;
+  project_center: ProjectCenterTable;
 }

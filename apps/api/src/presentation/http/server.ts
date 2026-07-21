@@ -20,6 +20,8 @@ import { PostgresIdentityService } from '../../infrastructure/postgres/identity-
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerAdminUserRoutes } from './routes/admin-users.js';
 import { AppError } from '../../application/errors.js';
+import { PostgresMasterService } from '../../infrastructure/postgres/master-service.js';
+import { registerBillingMasterRoutes } from './routes/billing-masters.js';
 
 export interface BuildServerOptions {
   readonly env: Env;
@@ -131,13 +133,14 @@ export async function buildServer({
     openapi: {
       info: {
         title: 'FactuFlow API',
-        description: 'FactuFlow. Fase 2: autenticación, usuarios, roles y sesiones.',
+        description: 'FactuFlow. Fase 3: autenticación y maestros de facturación.',
         version,
       },
       tags: [
         { name: 'sistema', description: 'Estado y diagnóstico' },
         { name: 'autenticación', description: 'Sesión y cuenta propia' },
         { name: 'administración', description: 'Usuarios, roles, sesiones y auditoría' },
+        { name: 'maestros', description: 'Consulta de maestros de facturación' },
       ],
     },
     transform: jsonSchemaTransform,
@@ -149,6 +152,7 @@ export async function buildServer({
   const identity = new PostgresIdentityService(db, env);
   registerAuthRoutes(app, { env, identity });
   registerAdminUserRoutes(app, { env, identity });
+  registerBillingMasterRoutes(app, { env, identity, masters: new PostgresMasterService(db) });
 
   return app;
 }

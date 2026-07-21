@@ -7,6 +7,7 @@ import type {
 } from '@factuflow/shared-schemas';
 import { api, ApiError } from './api.js';
 import { AuthProvider, useAuth } from './auth.js';
+import { ClientsPage, ProjectCentersPage, SimpleMastersPage } from './MasterPages.js';
 
 function usePath(): [string, (path: string) => void] {
   const [path, setPath] = useState(window.location.pathname);
@@ -191,7 +192,16 @@ function Shell({
           <button onClick={() => navigate('/')}>Inicio</button>
           <button onClick={() => navigate('/mi-cuenta')}>Mi cuenta</button>
           {user?.roles.includes('ADMIN') && (
-            <button onClick={() => navigate('/admin/usuarios')}>Usuarios</button>
+            <>
+              <button onClick={() => navigate('/admin/usuarios')}>Usuarios</button>
+              <button onClick={() => navigate('/admin/empresas-emisoras')}>
+                Empresas emisoras
+              </button>
+              <button onClick={() => navigate('/admin/responsables')}>Responsables</button>
+              <button onClick={() => navigate('/admin/clientes')}>Clientes</button>
+              <button onClick={() => navigate('/admin/productos')}>Productos</button>
+              <button onClick={() => navigate('/admin/cp-ms')}>CP/MS</button>
+            </>
           )}
         </nav>
         <div className="user-menu">
@@ -645,6 +655,16 @@ function RoutedApp(): JSX.Element {
       <ChangePassword navigate={navigate} />
     ) : path === '/admin/usuarios' && user.roles.includes('ADMIN') ? (
       <AdminUsers />
+    ) : path === '/admin/empresas-emisoras' && user.roles.includes('ADMIN') ? (
+      <SimpleMastersPage kind="issuer-companies" />
+    ) : path === '/admin/responsables' && user.roles.includes('ADMIN') ? (
+      <SimpleMastersPage kind="coordinators" />
+    ) : path === '/admin/clientes' && user.roles.includes('ADMIN') ? (
+      <ClientsPage />
+    ) : path === '/admin/productos' && user.roles.includes('ADMIN') ? (
+      <SimpleMastersPage kind="products" />
+    ) : path === '/admin/cp-ms' && user.roles.includes('ADMIN') ? (
+      <ProjectCentersPage />
     ) : (
       <Dashboard />
     );

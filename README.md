@@ -2,7 +2,7 @@
 
 Sistema de Solicitudes de Factura. Reemplaza el sistema anterior de MAS.
 
-**Estado: Fase 2 — autenticación, usuarios, roles, sesiones y trazabilidad.** No hay clientes, solicitudes, cálculos, UF ni Excel: siguen fuera del alcance aprobado. Ver `docs/PHASE_2_STATUS.md`.
+**Estado: Fase 3 — maestros de facturación.** Autenticación y trazabilidad siguen operativas; existen emisoras, responsables, clientes, reglas de facturación, receptores, productos y CP/MS. No hay solicitudes, cálculos, UF ni Excel. Ver `docs/PHASE_3_STATUS.md`.
 
 ---
 
@@ -261,16 +261,17 @@ Dos defectos del sistema anterior que aquí no existen:
 
 ## Documentación
 
-| Documento                           | Qué contiene                                          |
-| ----------------------------------- | ----------------------------------------------------- |
-| `docs/PHASE_1_STATUS.md`            | **Qué está verificado y qué no.** Empieza por aquí    |
-| `docs/PHASE_2_STATUS.md`            | Estado, pruebas y límites de autenticación            |
-| `docs/ARCHITECTURE.md`              | Arquitectura de identidad, sesiones, CSRF y auditoría |
-| `docs/RUNBOOK.md`                   | Operación segura de usuarios y sesiones               |
-| `docs/LEGACY_BACKEND_EVIDENCE.md`   | Qué prueba `back.zip`. Incluye riesgos de seguridad   |
-| `docs/UF_LEGACY_BEHAVIOR.md`        | UF real: el «endpoint del SII» es un scrape de HTML   |
-| `docs/ROUNDING_REGRESSION_CASES.md` | IVA y redondeos, con aritmética verificada            |
-| `docs/EXCEL_LEGACY_BEHAVIOR.md`     | Celdas exactas y la variante AFP Habitat              |
+| Documento                           | Qué contiene                                        |
+| ----------------------------------- | --------------------------------------------------- |
+| `docs/PHASE_1_STATUS.md`            | **Qué está verificado y qué no.** Empieza por aquí  |
+| `docs/PHASE_2_STATUS.md`            | Estado, pruebas y límites de autenticación          |
+| `docs/PHASE_3_STATUS.md`            | Estado y límites de maestros de facturación         |
+| `docs/ARCHITECTURE.md`              | Identidad, sesiones, maestros y auditoría           |
+| `docs/RUNBOOK.md`                   | Operación segura de usuarios y maestros             |
+| `docs/LEGACY_BACKEND_EVIDENCE.md`   | Qué prueba `back.zip`. Incluye riesgos de seguridad |
+| `docs/UF_LEGACY_BEHAVIOR.md`        | UF real: el «endpoint del SII» es un scrape de HTML |
+| `docs/ROUNDING_REGRESSION_CASES.md` | IVA y redondeos, con aritmética verificada          |
+| `docs/EXCEL_LEGACY_BEHAVIOR.md`     | Celdas exactas y la variante AFP Habitat            |
 
 ---
 
@@ -288,6 +289,6 @@ Ningún `password_hash` del sistema anterior se migra. Nunca.
 
 ## Qué NO hay todavía
 
-Clientes, receptores, responsables operativos, perfiles de coordinador, CP/MS, productos, solicitudes, duplicación, UF, cálculos, Excel y migración del master.
+UF, conversión UF–CLP, motor de cálculos, solicitudes, duplicación, aplicación de folios a solicitudes, Excel, documentos exportados, importación de `bdmaster.sql`, datos históricos, proyecciones, Slack ni solicitudes programadas.
 
 Todo eso llega en fases posteriores, **con aprobación explícita**. Ver `docs/PHASE_1_STATUS.md`.

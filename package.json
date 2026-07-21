@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
-  "description": "FactuFlow V1 - Fase 2: autenticacion, usuarios, roles y sesiones.",
+  "description": "FactuFlow V1 - Fase 3: maestros de facturacion.",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.0.0",

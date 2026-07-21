@@ -74,5 +74,7 @@ describe('frontend de autenticación', () => {
     expect(await screen.findByRole('heading', { name: 'Usuarios' })).toBeTruthy();
     await waitFor(() => expect(screen.getAllByText('Persona de prueba').length).toBeGreaterThan(0));
     expect(screen.getByRole('button', { name: /Crear y generar/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Clientes' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'CP/MS' })).toBeTruthy();
   });
 });

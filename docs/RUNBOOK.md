@@ -1,4 +1,4 @@
-# Runbook de autenticación — Fase 2
+# Runbook operativo — Fases 2 y 3
 
 ## Puesta en marcha
 
@@ -45,3 +45,27 @@ El bootstrap es interactivo. No pase passwords en argumentos ni en PowerShell. L
 - Login siempre usa mensaje genérico; investigue con `requestId` y auditoría, nunca revelando existencia de cuenta.
 
 No edite `audit_event` ni `login_attempt` con el rol de aplicación. La purga de intentos antiguos se programa fuera del API y sólo con owner.
+
+## Operación de maestros
+
+Después de `npm run db:migrate`, la migración 005 deja vacíos todos los maestros. No inserta empresas, personas, clientes, correos, productos ni CP reales.
+
+En la web, un ADMIN usa:
+
+- `/admin/empresas-emisoras` para emisoras y sugerencias tributarias;
+- `/admin/responsables` para perfiles operativos y su vínculo opcional con cuenta;
+- `/admin/clientes` para datos legales, responsable sugerido, regla, receptores y detalle de CP/MS;
+- `/admin/productos` para nombres canónicos;
+- `/admin/cp-ms` para seleccionar cliente y administrar la relación directa con producto.
+
+Los registros se desactivan; no se borran. Un cliente `PENDING_COMPLETION` admite datos legales ausentes para preservar historia, mientras `COMPLETE` exige RUT válido, razón social, giro y dirección. Un cliente inactivo no admite CP/MS nuevos. La variante `HABITAT` debe elegirse explícitamente: nunca se deduce del nombre.
+
+Diagnóstico de API:
+
+- 401: no hay sesión válida;
+- 403: rol insuficiente, cambio de contraseña pendiente o CSRF inválido;
+- 404: UUID válido, registro inexistente;
+- 409 `MASTER_DUPLICATE`: clave o relación única duplicada;
+- 422 `INVALID_RUT`, `CLIENT_INCOMPLETE` o relación inactiva/inválida.
+
+OpenAPI en `/docs` es la referencia de cuerpos, paginación, búsqueda y orden. `COORDINATOR` puede consultar endpoints de maestros, pero toda escritura bajo `/admin` exige ADMIN y CSRF.
