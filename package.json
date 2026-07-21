@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
-  "description": "FactuFlow V1 - Fase 3: maestros de facturacion.",
+  "description": "FactuFlow V1 - Fase 4: valores UF y calculos tributarios.",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.0.0",

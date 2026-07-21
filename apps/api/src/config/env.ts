@@ -5,6 +5,35 @@ const corsOriginSchema = z
   .url()
   .regex(/^https?:\/\//, 'CORS_ORIGINS sólo admite orígenes http:// o https://');
 
+const booleanStringSchema = z
+  .enum(['true', 'false'])
+  .default('true')
+  .transform((value) => value === 'true');
+
+const UF_ALLOWED_HOSTS = new Set(['www.sii.cl', 'mindicador.cl']);
+
+function validateUfBaseUrl(
+  rawUrl: string,
+  environment: 'development' | 'test' | 'production',
+): string | null {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return 'debe ser una URL válida';
+  }
+
+  if (url.username || url.password) return 'no puede incluir credenciales';
+  if (environment === 'test' && ['localhost', '127.0.0.1', '::1'].includes(url.hostname)) {
+    return ['http:', 'https:'].includes(url.protocol) ? null : 'sólo admite http:// o https://';
+  }
+  if (url.protocol !== 'https:') return 'debe usar HTTPS fuera de tests';
+  if (!UF_ALLOWED_HOSTS.has(url.hostname)) {
+    return `hostname no permitido; use ${[...UF_ALLOWED_HOSTS].join(' o ')}`;
+  }
+  return null;
+}
+
 /**
  * Validación de variables de entorno al arranque (criterio de término 10).
  *
@@ -68,6 +97,19 @@ const envSchema = z
     PASSWORD_HASH_MEMORY_KIB: z.coerce.number().int().positive().default(65_536),
     PASSWORD_HASH_TIME_COST: z.coerce.number().int().min(2).default(3),
     PASSWORD_HASH_PARALLELISM: z.coerce.number().int().positive().max(8).default(1),
+
+    UF_SII_BASE_URL: z.string().url().default('https://www.sii.cl/valores_y_fechas/uf/'),
+    UF_MINDICADOR_BASE_URL: z.string().url().default('https://mindicador.cl/api/'),
+    UF_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(250).max(30_000).default(10_000),
+    UF_REQUEST_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+    UF_CACHE_ENABLED: booleanStringSchema,
+    UF_USER_AGENT: z
+      .string()
+      .trim()
+      .min(3)
+      .max(200)
+      .regex(/^[^\r\n]+$/, 'no puede contener saltos de línea')
+      .default('FactuFlow/0.1 UF lookup'),
   })
   .superRefine((value, context) => {
     if (value.SESSION_IDLE_MINUTES > value.SESSION_ABSOLUTE_MINUTES) {
@@ -85,6 +127,13 @@ const envSchema = z
         path: ['PASSWORD_HASH_MEMORY_KIB'],
         message: `debe ser al menos ${String(minimumMemory)} KiB en ${value.NODE_ENV}`,
       });
+    }
+
+    for (const key of ['UF_SII_BASE_URL', 'UF_MINDICADOR_BASE_URL'] as const) {
+      const message = validateUfBaseUrl(value[key], value.NODE_ENV);
+      if (message !== null) {
+        context.addIssue({ code: z.ZodIssueCode.custom, path: [key], message });
+      }
     }
   });
 

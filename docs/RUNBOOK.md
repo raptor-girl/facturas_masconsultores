@@ -1,4 +1,4 @@
-# Runbook operativo — Fases 2 y 3
+# Runbook operativo — Fases 2, 3 y 4
 
 ## Puesta en marcha
 
@@ -11,19 +11,25 @@ El bootstrap es interactivo. No pase passwords en argumentos ni en PowerShell. L
 
 ## Variables
 
-| Variable                          |             Default | Uso                                                         |
-| --------------------------------- | ------------------: | ----------------------------------------------------------- |
-| `SESSION_COOKIE_NAME`             | `factuflow_session` | Cookie HttpOnly; sincronizar con `VITE_SESSION_COOKIE_NAME` |
-| `SESSION_IDLE_MINUTES`            |               `480` | Expiración por inactividad                                  |
-| `SESSION_ABSOLUTE_MINUTES`        |              `1440` | Límite absoluto                                             |
-| `SESSION_ACTIVITY_UPDATE_MINUTES` |                 `5` | Throttling de actividad                                     |
-| `LOGIN_MAX_ATTEMPTS`              |                 `5` | Fallos por ventana                                          |
-| `LOGIN_ATTEMPT_WINDOW_MINUTES`    |                `15` | Ventana de fallos                                           |
-| `LOGIN_LOCK_MINUTES`              |                `15` | Bloqueo                                                     |
-| `LOGIN_ATTEMPT_RETENTION_DAYS`    |                `90` | Retención documentada                                       |
-| `PASSWORD_HASH_MEMORY_KIB`        |             `65536` | Memoria Argon2id                                            |
-| `PASSWORD_HASH_TIME_COST`         |                 `3` | Costo Argon2id                                              |
-| `PASSWORD_HASH_PARALLELISM`       |                 `1` | Paralelismo Argon2id                                        |
+| Variable                          |                   Default | Uso                                                         |
+| --------------------------------- | ------------------------: | ----------------------------------------------------------- |
+| `SESSION_COOKIE_NAME`             |       `factuflow_session` | Cookie HttpOnly; sincronizar con `VITE_SESSION_COOKIE_NAME` |
+| `SESSION_IDLE_MINUTES`            |                     `480` | Expiración por inactividad                                  |
+| `SESSION_ABSOLUTE_MINUTES`        |                    `1440` | Límite absoluto                                             |
+| `SESSION_ACTIVITY_UPDATE_MINUTES` |                       `5` | Throttling de actividad                                     |
+| `LOGIN_MAX_ATTEMPTS`              |                       `5` | Fallos por ventana                                          |
+| `LOGIN_ATTEMPT_WINDOW_MINUTES`    |                      `15` | Ventana de fallos                                           |
+| `LOGIN_LOCK_MINUTES`              |                      `15` | Bloqueo                                                     |
+| `LOGIN_ATTEMPT_RETENTION_DAYS`    |                      `90` | Retención documentada                                       |
+| `PASSWORD_HASH_MEMORY_KIB`        |                   `65536` | Memoria Argon2id                                            |
+| `PASSWORD_HASH_TIME_COST`         |                       `3` | Costo Argon2id                                              |
+| `PASSWORD_HASH_PARALLELISM`       |                       `1` | Paralelismo Argon2id                                        |
+| `UF_SII_BASE_URL`                 |       URL oficial del SII | Tabla anual HTML                                            |
+| `UF_MINDICADOR_BASE_URL`          |         URL mindicador.cl | Fuente alternativa JSON                                     |
+| `UF_REQUEST_TIMEOUT_MS`           |                   `10000` | Timeout por intento                                         |
+| `UF_REQUEST_RETRIES`              |                       `2` | Reintentos después del intento inicial                      |
+| `UF_CACHE_ENABLED`                |                    `true` | Consulta PostgreSQL antes de las fuentes                    |
+| `UF_USER_AGENT`                   | `FactuFlow/0.1 UF lookup` | Identificación HTTP sin secretos                            |
 
 `SESSION_IDLE_MINUTES` no puede superar la duración absoluta. Producción rechaza memoria Argon2 inferior a 65536 KiB.
 
@@ -69,3 +75,22 @@ Diagnóstico de API:
 - 422 `INVALID_RUT`, `CLIENT_INCOMPLETE` o relación inactiva/inválida.
 
 OpenAPI en `/docs` es la referencia de cuerpos, paginación, búsqueda y orden. `COORDINATOR` puede consultar endpoints de maestros, pero toda escritura bajo `/admin` exige ADMIN y CSRF.
+
+## Operación UF y cálculo
+
+- `GET /uf-values/:date`: ADMIN y COORDINATOR; fecha exacta `YYYY-MM-DD`.
+- `POST /admin/uf-values/:date/refresh`: sólo ADMIN y CSRF. Una diferencia se conserva en auditoría con antes/después y fuente.
+- `POST /calculations/invoice-preview`: ADMIN y COORDINATOR, con CSRF; valida CP/MS activos del mismo cliente y no persiste nada.
+- `/herramientas/calculo`: fecha explícita, cliente, autocomplete CP/MS, cantidades UF textuales y tratamiento afecto/exento.
+
+La entrada decimal web acepta coma o punto, pero no ambos; se normaliza a string canónico con punto. No use `input type=number`, `parseFloat`, `Number` ni `Intl.NumberFormat` sobre montos. El formateador CLP agrupa el string entero directamente.
+
+Diagnóstico:
+
+- 400 `UF_DATE_INVALID`: fecha inexistente o fuera del rango soportado;
+- 404 `UF_NOT_PUBLISHED`: ninguno de los proveedores publicó exactamente esa fecha;
+- 502 `UF_PROVIDER_INVALID_RESPONSE`: contrato, content type o contenido externo inválido;
+- 503 `UF_PROVIDER_UNAVAILABLE`: timeout, red, 429 o 5xx después de los reintentos;
+- 422 `PROJECT_CENTER_INACTIVE`/`PROJECT_CENTER_CLIENT_MISMATCH`: input de previsualización no utilizable.
+
+Nunca cambie manualmente una UF con el rol de aplicación. Para investigar, correlacione `requestId` con `UF_VALUE_FETCHED`, `UF_VALUE_REFRESHED`, `UF_VALUE_CHANGED` y `UF_PROVIDER_FAILED`; la auditoría no guarda HTML ni respuestas externas completas.

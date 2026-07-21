@@ -1,4 +1,4 @@
-# Arquitectura — Fases 2 y 3
+# Arquitectura — Fases 2, 3 y 4
 
 ## Límites
 
@@ -45,3 +45,15 @@ Las escrituras de maestros se ejecutan en el servicio PostgreSQL dentro de la mi
 ## RUT chileno
 
 El dominio elimina puntos, guion y espacios, normaliza `K`, calcula el dígito verificador módulo 11 y persiste cuerpo+DV. La presentación vuelve al formato con puntos y guion. La base exige forma canónica y unicidad; el dominio asegura el DV. Los clientes pendientes pueden omitir RUT, pero si lo informan debe ser válido.
+
+## UF y cálculo exacto
+
+`uf_value` es la caché durable y única por `value_date`. PostgreSQL usa `NUMERIC(20,6)` y el contrato público usa string. `factuflow_owner` conserva el ownership; `factuflow_app` sólo tiene SELECT/INSERT/UPDATE y carece de DELETE/TRUNCATE.
+
+Los adaptadores `SiiUfProvider` y `MindicadorUfProvider` implementan el puerto `UfProvider`; el dominio matemático no conoce HTTP ni PostgreSQL. La aplicación consulta caché, luego SII y finalmente mindicador. No sustituye una fecha faltante por una cercana. Los fallos de proveedor se clasifican como temporal, respuesta inválida o no publicado.
+
+El cliente HTTP de infraestructura limita timeout, reintentos con backoff, redirecciones y un máximo de 1 MB. En producción sólo permite HTTPS y los hosts `www.sii.cl` y `mindicador.cl`, valida cada redirección, resuelve DNS y rechaza direcciones privadas. Los servidores HTTP locales sólo se admiten con `NODE_ENV=test`.
+
+`calculateInvoiceAmounts` es puro y versionado como `LEGACY_V1`: recibe fecha, valor UF, tratamiento, tasa y líneas. Convierte y redondea cada CP/MS con `ROUND_HALF_UP` antes de sumar; el IVA afecto usa Decimal y `ROUND_CEIL` al siguiente múltiplo de $10. No consulta base, red, reloj ni folios. El servicio de aplicación valida existencia, actividad y cliente común de los CP/MS.
+
+La recarga administrativa y sus eventos `UF_VALUE_REFRESHED`/`UF_VALUE_CHANGED` comparten transacción con el cambio. Si falla la auditoría, el valor anterior permanece. Una previsualización no es un evento de solicitud y no se audita como tal.

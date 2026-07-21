@@ -8,6 +8,7 @@ import type {
 import { api, ApiError } from './api.js';
 import { AuthProvider, useAuth } from './auth.js';
 import { ClientsPage, ProjectCentersPage, SimpleMastersPage } from './MasterPages.js';
+import { CalculationPreview } from './CalculationPreview.js';
 
 function usePath(): [string, (path: string) => void] {
   const [path, setPath] = useState(window.location.pathname);
@@ -191,6 +192,7 @@ function Shell({
         <nav aria-label="Navegación principal">
           <button onClick={() => navigate('/')}>Inicio</button>
           <button onClick={() => navigate('/mi-cuenta')}>Mi cuenta</button>
+          <button onClick={() => navigate('/herramientas/calculo')}>Cálculo técnico</button>
           {user?.roles.includes('ADMIN') && (
             <>
               <button onClick={() => navigate('/admin/usuarios')}>Usuarios</button>
@@ -651,6 +653,8 @@ function RoutedApp(): JSX.Element {
   const content =
     path === '/mi-cuenta' ? (
       <Account />
+    ) : path === '/herramientas/calculo' ? (
+      <CalculationPreview />
     ) : path === '/cambiar-contrasena' ? (
       <ChangePassword navigate={navigate} />
     ) : path === '/admin/usuarios' && user.roles.includes('ADMIN') ? (

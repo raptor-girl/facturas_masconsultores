@@ -14,6 +14,7 @@ import type { Generated, ColumnType } from 'kysely';
  */
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
+type DateOnly = ColumnType<string | Date, string, string>;
 
 export type JsonValue =
   string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
@@ -212,6 +213,21 @@ export interface ProjectCenterTable {
   created_by: string | null;
 }
 
+export type UfSource = 'sii.cl' | 'mindicador.cl';
+
+export interface UfValueTable {
+  id: Generated<string>;
+  value_date: DateOnly;
+  /** NUMERIC(20,6): el driver debe conservarlo como string. */
+  value: string;
+  source: UfSource;
+  fetched_at: Timestamp;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  source_reference: string | null;
+  metadata: JsonValue | null;
+}
+
 export interface Database {
   app_role: AppRoleTable;
   app_user: AppUserTable;
@@ -227,4 +243,5 @@ export interface Database {
   receiver: ReceiverTable;
   product: ProductTable;
   project_center: ProjectCenterTable;
+  uf_value: UfValueTable;
 }

@@ -78,4 +78,38 @@ describe('Validacion de variables de entorno', () => {
   it('rechaza un rate limit no positivo', () => {
     expect(() => loadEnv({ ...valid, RATE_LIMIT_MAX: '0' })).toThrow(/RATE_LIMIT_MAX/);
   });
+
+  it('valida configuración UF, boolean y límites de reintentos', () => {
+    const env = loadEnv({ ...valid, UF_CACHE_ENABLED: 'false', UF_REQUEST_RETRIES: '5' });
+    expect(env.UF_CACHE_ENABLED).toBe(false);
+    expect(env.UF_REQUEST_RETRIES).toBe(5);
+    expect(() => loadEnv({ ...valid, UF_REQUEST_RETRIES: '6' })).toThrow(/UF_REQUEST_RETRIES/);
+  });
+
+  it('bloquea protocolos y hosts UF no permitidos fuera de tests', () => {
+    const production = {
+      ...valid,
+      NODE_ENV: 'production',
+      DATABASE_URL_APP: 'postgresql://factuflow_app:x@database.example.invalid:5432/factuflow',
+    };
+    expect(() => loadEnv({ ...production, UF_SII_BASE_URL: 'http://www.sii.cl/uf/' })).toThrow(
+      /UF_SII_BASE_URL/,
+    );
+    expect(() =>
+      loadEnv({ ...production, UF_MINDICADOR_BASE_URL: 'https://127.0.0.1/api/' }),
+    ).toThrow(/UF_MINDICADOR_BASE_URL/);
+    expect(() => loadEnv({ ...production, UF_SII_BASE_URL: 'file:///etc/passwd' })).toThrow(
+      /UF_SII_BASE_URL/,
+    );
+  });
+
+  it('permite HTTP local únicamente para proveedores simulados en test', () => {
+    expect(
+      loadEnv({
+        ...valid,
+        UF_SII_BASE_URL: 'http://127.0.0.1:31001/',
+        UF_MINDICADOR_BASE_URL: 'http://localhost:31002/api/',
+      }).UF_SII_BASE_URL,
+    ).toBe('http://127.0.0.1:31001/');
+  });
 });

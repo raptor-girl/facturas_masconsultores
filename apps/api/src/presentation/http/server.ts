@@ -22,11 +22,21 @@ import { registerAdminUserRoutes } from './routes/admin-users.js';
 import { AppError } from '../../application/errors.js';
 import { PostgresMasterService } from '../../infrastructure/postgres/master-service.js';
 import { registerBillingMasterRoutes } from './routes/billing-masters.js';
+import type { UfProvider } from '../../application/uf/uf-provider.js';
+import { SafeHttpClient } from '../../infrastructure/uf/safe-http-client.js';
+import { SiiUfProvider } from '../../infrastructure/uf/sii-provider.js';
+import { MindicadorUfProvider } from '../../infrastructure/uf/mindicador-provider.js';
+import {
+  PostgresInvoicePreviewService,
+  PostgresUfService,
+} from '../../infrastructure/postgres/uf-service.js';
+import { registerUfCalculationRoutes } from './routes/uf-calculations.js';
 
 export interface BuildServerOptions {
   readonly env: Env;
   readonly db: Kysely<Database>;
   readonly version: string;
+  readonly ufProviders?: readonly UfProvider[];
 }
 
 /**
@@ -44,6 +54,7 @@ export async function buildServer({
   env,
   db,
   version,
+  ufProviders,
 }: BuildServerOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
@@ -133,7 +144,7 @@ export async function buildServer({
     openapi: {
       info: {
         title: 'FactuFlow API',
-        description: 'FactuFlow. Fase 3: autenticación y maestros de facturación.',
+        description: 'FactuFlow. Fase 4: autenticación, maestros, valores UF y cálculos.',
         version,
       },
       tags: [
@@ -141,6 +152,7 @@ export async function buildServer({
         { name: 'autenticación', description: 'Sesión y cuenta propia' },
         { name: 'administración', description: 'Usuarios, roles, sesiones y auditoría' },
         { name: 'maestros', description: 'Consulta de maestros de facturación' },
+        { name: 'UF y cálculos', description: 'Valores UF y previsualización no persistente' },
       ],
     },
     transform: jsonSchemaTransform,
@@ -153,6 +165,23 @@ export async function buildServer({
   registerAuthRoutes(app, { env, identity });
   registerAdminUserRoutes(app, { env, identity });
   registerBillingMasterRoutes(app, { env, identity, masters: new PostgresMasterService(db) });
+  const http = new SafeHttpClient({
+    environment: env.NODE_ENV,
+    timeoutMs: env.UF_REQUEST_TIMEOUT_MS,
+    retries: env.UF_REQUEST_RETRIES,
+    userAgent: env.UF_USER_AGENT,
+  });
+  const providers = ufProviders ?? [
+    new SiiUfProvider(env.UF_SII_BASE_URL, http),
+    new MindicadorUfProvider(env.UF_MINDICADOR_BASE_URL, http),
+  ];
+  const uf = new PostgresUfService(db, providers, env.UF_CACHE_ENABLED);
+  registerUfCalculationRoutes(app, {
+    env,
+    identity,
+    uf,
+    calculations: new PostgresInvoicePreviewService(db, uf),
+  });
 
   return app;
 }

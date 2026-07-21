@@ -2,7 +2,7 @@
 
 Sistema de Solicitudes de Factura. Reemplaza el sistema anterior de MAS.
 
-**Estado: Fase 3 — maestros de facturación.** Autenticación y trazabilidad siguen operativas; existen emisoras, responsables, clientes, reglas de facturación, receptores, productos y CP/MS. No hay solicitudes, cálculos, UF ni Excel. Ver `docs/PHASE_3_STATUS.md`.
+**Estado: Fase 4 — valores UF y cálculo tributario.** Autenticación, trazabilidad y maestros siguen operativos; existe consulta UF con caché/fallback y previsualización exacta no persistente. No hay solicitudes ni Excel. Ver `docs/PHASE_4_STATUS.md`.
 
 ---
 
@@ -255,7 +255,23 @@ Dos defectos del sistema anterior que aquí no existen:
 
 `reserve_folio` es `SECURITY DEFINER`: la aplicación reserva folios pero **no puede tocar el contador** directamente.
 
-**En la Fase 1 nadie lo llama.** Existe, está probado bajo concurrencia (50 reservas simultáneas) y espera a la fase de solicitudes.
+**Ningún flujo actual lo llama.** Existe, está probado bajo concurrencia (50 reservas simultáneas) y espera a la fase de solicitudes.
+
+---
+
+## UF y cálculo tributario
+
+La Fase 4 incorpora una caché PostgreSQL por fecha y la cadena `caché → SII → mindicador.cl`. La fecha siempre es explícita: si el valor exacto no existe o aún no fue publicado, FactuFlow no inventa ni sustituye otro día.
+
+El motor puro `LEGACY_V1` aplica esta secuencia:
+
+1. cada CP/MS calcula `cantidad UF × valor UF` y redondea `ROUND_HALF_UP` a CLP;
+2. suma los CLP ya redondeados para obtener el neto;
+3. para `AFFECTED`, calcula IVA `0.19` y lo eleva al siguiente múltiplo de $10;
+4. para `EXEMPT`, IVA es `0`;
+5. total = neto + IVA.
+
+Todos los decimales cruzan API y PostgreSQL como `string`; el dominio usa `decimal.js`. La herramienta protegida `/herramientas/calculo` sólo previsualiza: no persiste solicitudes ni reserva folios.
 
 ---
 
@@ -266,6 +282,7 @@ Dos defectos del sistema anterior que aquí no existen:
 | `docs/PHASE_1_STATUS.md`            | **Qué está verificado y qué no.** Empieza por aquí  |
 | `docs/PHASE_2_STATUS.md`            | Estado, pruebas y límites de autenticación          |
 | `docs/PHASE_3_STATUS.md`            | Estado y límites de maestros de facturación         |
+| `docs/PHASE_4_STATUS.md`            | Estado y límites de UF y motor tributario           |
 | `docs/ARCHITECTURE.md`              | Identidad, sesiones, maestros y auditoría           |
 | `docs/RUNBOOK.md`                   | Operación segura de usuarios y maestros             |
 | `docs/LEGACY_BACKEND_EVIDENCE.md`   | Qué prueba `back.zip`. Incluye riesgos de seguridad |
@@ -289,6 +306,6 @@ Ningún `password_hash` del sistema anterior se migra. Nunca.
 
 ## Qué NO hay todavía
 
-UF, conversión UF–CLP, motor de cálculos, solicitudes, duplicación, aplicación de folios a solicitudes, Excel, documentos exportados, importación de `bdmaster.sql`, datos históricos, proyecciones, Slack ni solicitudes programadas.
+Solicitudes persistidas, duplicación, aplicación de folios a solicitudes, Excel, documentos exportados, importación de `bdmaster.sql`, datos históricos, proyecciones, Slack ni solicitudes programadas.
 
 Todo eso llega en fases posteriores, **con aprobación explícita**. Ver `docs/PHASE_1_STATUS.md`.

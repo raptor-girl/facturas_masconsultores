@@ -403,6 +403,72 @@ small {
 .empty-result {
   color: var(--muted);
 }
+.calculation-panel {
+  display: grid;
+  gap: 1rem;
+}
+.calculation-panel h2 {
+  margin: 0;
+}
+.lookup-row,
+.line-builder {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, 0.6fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+.lookup-row {
+  grid-template-columns: minmax(12rem, 20rem) auto;
+  justify-content: start;
+}
+.selection-note,
+.preview-warning {
+  color: var(--green-dark);
+}
+.uf-summary,
+.totals {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.45rem 1rem;
+  margin: 0;
+}
+.uf-summary dd,
+.totals dd {
+  margin: 0;
+  font-weight: 700;
+}
+.calculation-lines {
+  display: grid;
+  gap: 0.6rem;
+}
+.calculation-lines article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+}
+.calculation-lines article > div {
+  display: grid;
+  min-width: 0;
+}
+.calculation-lines span,
+.calculation-lines small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.totals {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.totals dt:last-of-type,
+.totals dd:last-of-type {
+  font-size: 1.2rem;
+  color: var(--green-dark);
+}
 @media (max-width: 52rem) {
   .topbar {
     grid-template-columns: 1fr auto;
@@ -472,5 +538,13 @@ small {
   .inline-form {
     align-items: stretch;
     flex-direction: column;
+  }
+  .lookup-row,
+  .line-builder {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .calculation-lines article {
+    align-items: flex-start;
   }
 }

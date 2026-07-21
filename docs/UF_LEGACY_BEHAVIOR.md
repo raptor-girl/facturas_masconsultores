@@ -135,3 +135,13 @@ if (usaUF && !ufValor) {
 | U-07 | `uf_fecha` nula y hay montos en UF          | Usa la fecha de hoy ⚠️ ver §4                                              |
 | U-08 | Fecha futura fuera del horizonte publicado  | Sin datos → `UF_UNAVAILABLE`                                               |
 | U-09 | Precisión: `40543.07` ida y vuelta          | **V1 debe devolver `40543.07` exacto.** El legado devuelve `40543.0703125` |
+
+---
+
+## 8. Implementación aprobada en Fase 4
+
+La reconstrucción conserva la prioridad solicitada `PostgreSQL → SII → mindicador.cl`, pero no propaga la fecha implícita de U-07: el llamador siempre entrega `YYYY-MM-DD` y ninguna fuente puede reemplazar ese día por el anterior o posterior.
+
+SII se consume como HTML anual controlado y mindicador como JSON anual. Ambos adaptadores validan contenido, fecha y decimal antes de persistir solamente el valor solicitado. El HTTP compartido limita tamaño, tiempo, reintentos y redirecciones y aplica allowlist/validación DNS contra SSRF. Los tests usan fixtures y servidores locales sólo bajo `NODE_ENV=test`; CI no depende de Internet.
+
+`uf_value` conserva un único valor por fecha, fuente, instante de obtención y referencia pública minimizada. No almacena HTML ni respuestas completas. Una recarga con valor distinto registra antes/después dentro de la misma transacción.
