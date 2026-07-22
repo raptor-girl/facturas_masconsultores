@@ -114,4 +114,19 @@ Diagnóstico:
 
 No hay archivos temporales en disco ni directorio `storage/exports`; el XLSX vive en PostgreSQL. Para investigar use `requestId`, `INVOICE_REQUEST_EXPORTED` e `INVOICE_EXPORT_DOWNLOADED`. Nunca registre el body completo, la idempotency key ni el BYTEA.
 
-La plantilla actual es técnica y lleva una marca visible. Antes de aprobación visual de producción debe incorporarse una plantilla oficial ficticia/sin datos personales y actualizar su versión; no use como golden files los Excel históricos reales.
+Las exportaciones nuevas usan la candidata clonada `SOLICITUD_FACTURA_CLONE_CANDIDATE_V1`. La base se carga desde `templates/approved/solicitud-factura-soprole-clone-v1.xlsx`; no se modifica y nunca se escribe el resultado productivo en disco. Los documentos históricos conservan su versión y BYTEA originales.
+
+Para verificar la base clonada y generar los seis casos ficticios de revisión:
+
+```bash
+npm run template:build
+npm run template:review
+```
+
+Antes de revisar, confirme el hash de la referencia privada sin abrirla en runtime:
+
+```powershell
+Get-FileHash templates/reference-private/solicitud_factura_soprole_2026_abril.xls -Algorithm SHA256
+```
+
+Debe ser `4b47d4a68c5b83ad16950e86374075ef158c06d7d88e0bffc608489023eb0c36`. Los resultados quedan en `tmp/template-review/`, ruta ignorada por Git. No copie datos reales a esa carpeta, no use los Excel históricos como golden files y no cambie la versión a `APPROVED` antes de la revisión visual de la usuaria.

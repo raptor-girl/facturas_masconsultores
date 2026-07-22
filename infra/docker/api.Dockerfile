@@ -40,6 +40,7 @@ RUN npm ci --omit=dev --workspace @factuflow/api --workspace @factuflow/shared-s
 
 COPY --from=build /repo/packages/shared-schemas/dist packages/shared-schemas/dist
 COPY --from=build /repo/apps/api/dist apps/api/dist
+COPY templates/approved/solicitud-factura-soprole-clone-v1.xlsx templates/approved/
 # Las migraciones viajan en la imagen para poder ejecutarlas desde el
 # contenedor si hiciera falta — pero NUNCA se aplican solas al arrancar.
 COPY apps/api/migrations apps/api/migrations

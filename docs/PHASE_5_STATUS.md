@@ -16,7 +16,7 @@ La combinación `(created_by, idempotency_key)` es única. La clave se vincula a
 
 La variante proviene exclusivamente de `client_invoice_rule.excel_template_variant`; nunca del nombre del cliente. `STANDARD` conserva OC en `C12`; `HABITAT` combina OC/Contrato en esa celda y HES permanece en `C13`. El archivo incluye múltiples CP, receptores, neto/IVA/total exactos y no imprime el folio dentro del workbook. Formula injection, nombres inseguros, macros, vínculos externos y archivos mayores de 5 MiB se rechazan.
 
-El repositorio no contiene la plantilla histórica `templates/solicitud-factura-ejemplo.xlsx`. Por ello se implementó una plantilla técnica claramente marcada `TECHNICAL_V1_UNAPPROVED`. Las celdas y reglas están verificadas, pero la comparación visual final y los golden files aprobados quedan pendientes; no se copiaron Excel reales.
+Fase 5.1C reemplaza las candidatas visualmente rechazadas por `SOLICITUD_FACTURA_CLONE_CANDIDATE_V1`, clon convertido desde el Excel real de Soprole. La base versionable está en `templates/approved/solicitud-factura-soprole-clone-v1.xlsx`; la referencia BIFF8 permanece sólo en `templates/reference-private/`, ignorada por Git y excluida de Docker. Receptores y CP/MS se escriben en las celdas originales con saltos de línea, sin secciones nuevas ni campos técnicos visibles. Los montos provienen de `LEGACY_V1`; para afectas sólo se permiten fórmulas controladas en `C16` y `C17` con valores cacheados iguales al backend. La aprobación visual final sigue pendiente y se documenta en `PHASE_5_1_TEMPLATE_STATUS.md`.
 
 ## API, permisos y frontend
 
@@ -44,7 +44,7 @@ Quedan fuera borradores, edición/borrado, estados adicionales, aprobación/rech
 
 ## Validación de cierre
 
-La migración 007 está aplicada y `db:status` no deja pendientes. `format:check`, lint, typecheck y build pasan. `test:unit` aprobó 69 pruebas (56 API + 13 web), `test:integration` aprobó 73 y `verify` aprobó el conjunto completo de 142 (129 API + 13 web). `npm audit --omit=dev` informa 0 vulnerabilidades de runtime; la instalación completa mantiene 12 avisos sólo en herramientas de desarrollo.
+La migración 007 está aplicada y `db:status` no deja pendientes. `format:check`, lint, typecheck y build pasan. `test:unit` aprobó 71 pruebas (58 API + 13 web), `test:integration` aprobó 73 y `verify` aprobó el conjunto completo de 144 (131 API + 13 web). `npm audit --omit=dev` informa 0 vulnerabilidades de runtime; la instalación completa mantiene 13 avisos sólo en herramientas de desarrollo.
 
 La primera corrida completa de integración descubrió una aserción obsoleta de Fase 4 que exigía ausencia de tablas `*request*`. Se conservó la prueba y se corrigió su intención: preview debe dejar en cero `invoice_request`, líneas, receptores y exports, además de no alterar `folio_counter`. La suite completa volvió a ejecutarse y pasó 73/73.
 
@@ -56,6 +56,6 @@ PostgreSQL confirma ownership `factuflow_owner` y exactamente SELECT/INSERT para
 
 ## Clasificación
 
-**FASE 5 APROBADA CON OBSERVACIONES.** El flujo funcional, transaccional, numérico y de seguridad está aprobado. La única observación es no funcional: la fidelidad visual final del Excel sigue bloqueada hasta recibir la plantilla oficial `templates/solicitud-factura-ejemplo.xlsx` libre de datos reales. La plantilla técnica actual se identifica expresamente como no aprobada.
+**FASE 5 APROBADA CON OBSERVACIONES.** El flujo funcional, transaccional, numérico y de seguridad permanece aprobado. La candidata clonada fue homologada estructuralmente contra el Excel real de Soprole, pero no se clasifica como aprobada visualmente hasta que la usuaria abra los seis casos de `tmp/template-review/`.
 
 No se incorporaron datos reales, Excel históricos ni secretos. No se realizó commit ni push.

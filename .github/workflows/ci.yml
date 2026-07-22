@@ -127,6 +127,7 @@ jobs:
           # docs/LEGACY_BACKEND_EVIDENCE.md §1.
           encontrados=$(git ls-files | grep -iE \
             '(^|/)\.env$|(^|/)back\.zip$|bdmaster.*\.sql$|(^|/)seed\.json$|\.sqlite|\.db-(wal|shm)$|\.xlsx?$' \
+            | grep -ivE '^templates/approved/solicitud-factura-approved-v1\.xlsx$' \
             || true)
           if [ -n "$encontrados" ]; then
             echo "::error::Archivos sensibles versionados:"

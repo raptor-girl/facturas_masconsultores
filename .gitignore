@@ -53,9 +53,13 @@ exports/
 *.xlsm
 *.xlsb
 *.csv
+templates/reference-private/
+tmp/template-review/
 # Excepción: golden files ficticios y aprobados (cuando existan).
 # Se habilitan uno a uno de forma explícita, nunca por patrón amplio.
 !apps/api/tests/golden/**/*.xlsx
+!templates/approved/
+!templates/approved/solicitud-factura-soprole-clone-v1.xlsx
 
 # --- Documentos e insumos con datos personales ---
 *.docx

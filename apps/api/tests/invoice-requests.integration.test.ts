@@ -13,6 +13,11 @@ import { loadEnv, type Env } from '../src/config/env.js';
 import { buildServer } from '../src/presentation/http/server.js';
 import { PostgresIdentityService } from '../src/infrastructure/postgres/identity-service.js';
 import type { InvoiceRequestExportInput } from '@factuflow/shared-schemas';
+import {
+  listFormulaCells,
+  readExactNumericCell,
+  readFormulaCell,
+} from '../src/infrastructure/excel/xlsx-archive.js';
 
 interface Jar {
   cookie: string;
@@ -565,7 +570,7 @@ describe('solicitudes exportadas, idempotencia, folios y XLSX', () => {
       iva_clp: '237260',
       total_clp: '1485986',
       calculation_algorithm_version: 'LEGACY_V1',
-      excel_template_version: 'TECHNICAL_V1_UNAPPROVED',
+      excel_template_version: 'SOLICITUD_FACTURA_CLONE_CANDIDATE_V1',
       sha256,
     });
     expect(Buffer.compare(stored.content, response.rawPayload)).toBe(0);
@@ -574,9 +579,24 @@ describe('solicitudes exportadas, idempotencia, folios y XLSX', () => {
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(Uint8Array.from(response.rawPayload).buffer);
-    const sheet = workbook.getWorksheet('Solicitud de factura')!;
-    expect(sheet.getCell('C15').formula).toBe('1248726');
-    expect(sheet.getCell('C15').formula).not.toBe('1248727');
+    const sheet = workbook.getWorksheet('Hoja1');
+    expect(sheet).toBeTruthy();
+    expect(sheet?.getCell('C4').text).toBe('MAS CONSULTORES S.A.');
+    expect(sheet?.getCell('C22').text).toBe('MAS Plataformas');
+    expect(sheet?.getCell('C18').text).toContain('receiver.standard@example.invalid');
+    expect(sheet?.getCell('C21').text).toBe('CP-P5-1\nCP-P5-2');
+    expect(await readExactNumericCell(response.rawPayload, 'C15')).toBe('1248726');
+    expect(await readExactNumericCell(response.rawPayload, 'C15')).not.toBe('1248727');
+    expect(await readFormulaCell(response.rawPayload, 'C16')).toEqual({
+      address: 'C16',
+      formula: 'ROUNDUP((C15*19%),0)',
+      cachedValue: '237260',
+    });
+    expect(await readFormulaCell(response.rawPayload, 'C17')).toEqual({
+      address: 'C17',
+      formula: 'C15+C16',
+      cachedValue: '1485986',
+    });
     expect(JSON.stringify(workbook.model)).not.toContain('SF-2026-00001');
     expect(
       await db
@@ -742,11 +762,16 @@ describe('solicitudes exportadas, idempotencia, folios y XLSX', () => {
     expect(response.statusCode).toBe(200);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(Uint8Array.from(response.rawPayload).buffer);
-    const sheet = workbook.getWorksheet('Solicitud de factura')!;
+    const sheet = workbook.getWorksheet('Hoja1')!;
     expect(sheet.getCell('B12').text).toBe('OC / N° Contrato');
     expect(sheet.getCell('C12').text).toBe('OC: OC-H-1 / Contrato: CONTRATO-H-1');
     expect(sheet.getCell('C13').text).toBe('HES-H-1');
-    expect(sheet.getCell('C16').formula).toBe('0');
+    expect(sheet.getCell('C4').text).toBe('MAS CONSULTORES S.A.');
+    expect(sheet.getCell('C15').text).toBe('');
+    expect(sheet.getCell('C16').text).toBe('');
+    expect(await readExactNumericCell(response.rawPayload, 'C16')).toBeNull();
+    expect(await readExactNumericCell(response.rawPayload, 'C17')).toBe('40543');
+    expect(await listFormulaCells(response.rawPayload)).toEqual([]);
   });
 
   it('duplicar sólo precarga memoria y al exportar obtiene nuevo folio con vínculo de origen', async () => {

@@ -21,6 +21,10 @@ seed.json
 *.sqlite-*
 *.xlsx
 *.xls
+templates/reference-private/
+tmp/template-review/
+!templates/approved/
+!templates/approved/solicitud-factura-soprole-clone-v1.xlsx
 *.docx
 storage/
 docs/

@@ -277,7 +277,16 @@ Todos los decimales cruzan API y PostgreSQL como `string`; el dominio usa `decim
 
 No hay estado borrador. `POST /invoice-requests/export` exige sesión ADMIN/COORDINATOR, CSRF e `Idempotency-Key`; revalida maestros y UF, reutiliza `LEGACY_V1`, genera y valida el XLSX en memoria y recién entonces abre la transacción que reserva folio, inserta snapshots/líneas/receptores, almacena el `BYTEA` con SHA-256 y audita. Si algo falla, no existe solicitud y el folio no se consume.
 
-El historial está en `/solicitudes`; `/solicitudes/nueva` crea y descarga, el detalle es inmutable y duplicar sólo precarga un formulario nuevo en memoria. El archivo almacenado se descarga byte por byte, sin regenerarlo. La plantilla disponible es `TECHNICAL_V1_UNAPPROVED`: reproduce el mapa de celdas y las variantes `STANDARD`/`HABITAT`, pero la comparación visual final queda pendiente porque la plantilla histórica aprobada no está en este repositorio.
+El historial está en `/solicitudes`; `/solicitudes/nueva` crea y descarga, el detalle es inmutable y duplicar sólo precarga un formulario nuevo en memoria. El archivo almacenado se descarga byte por byte, sin regenerarlo. Las exportaciones nuevas usan `SOLICITUD_FACTURA_CLONE_CANDIDATE_V1`, clon visual del Excel real de Soprole cargado desde `templates/approved/solicitud-factura-soprole-clone-v1.xlsx`; C4 imprime `MAS CONSULTORES S.A.`, C22 imprime `MAS Plataformas` y las afectas sólo permiten fórmulas controladas de montos en C16/C17. La aprobación visual sigue pendiente. Los archivos históricos, incluidos `TECHNICAL_V1_UNAPPROVED` y candidatas rechazadas, no se regeneran.
+
+Para reconstruir la candidata y generar los seis casos ficticios de homologación:
+
+```bash
+npm run template:build
+npm run template:review
+```
+
+Los casos quedan en `tmp/template-review/` y no se versionan. La referencia BIFF8 privada `solicitud_factura_soprole_2026_abril.xls` (SHA-256 `4b47d4a68c5b83ad16950e86374075ef158c06d7d88e0bffc608489023eb0c36`) tampoco entra a Git, Docker ni al runtime.
 
 ---
 
@@ -290,6 +299,8 @@ El historial está en `/solicitudes`; `/solicitudes/nueva` crea y descarga, el d
 | `docs/PHASE_3_STATUS.md`            | Estado y límites de maestros de facturación         |
 | `docs/PHASE_4_STATUS.md`            | Estado y límites de UF y motor tributario           |
 | `docs/PHASE_5_STATUS.md`            | Solicitudes inmutables, transacción y XLSX          |
+| `docs/PHASE_5_1_TEMPLATE_STATUS.md` | Homologación y estado de la plantilla candidata     |
+| `docs/INVOICE_TEMPLATE_CELL_MAP.md` | Mapa central, offsets y variantes del XLSX          |
 | `docs/ARCHITECTURE.md`              | Identidad, sesiones, maestros y auditoría           |
 | `docs/RUNBOOK.md`                   | Operación segura de usuarios y maestros             |
 | `docs/LEGACY_BACKEND_EVIDENCE.md`   | Qué prueba `back.zip`. Incluye riesgos de seguridad |
@@ -301,7 +312,7 @@ El historial está en `/solicitudes`; `/solicitudes/nueva` crea y descarga, el d
 
 ## Seguridad
 
-`.gitignore` es una barrera, no una comodidad. **Nunca** se versionan: `.env`, `back.zip`, `bdmaster.sql`, `seed.json`, `*.sqlite*` (incluidos `-wal` y `-shm`, que contienen datos aunque el `.sqlite` parezca limpio), `*.xlsx`, `storage/`.
+`.gitignore` es una barrera, no una comodidad. **Nunca** se versionan: `.env`, `back.zip`, `bdmaster.sql`, `seed.json`, `*.sqlite*` (incluidos `-wal` y `-shm`, que contienen datos aunque el `.sqlite` parezca limpio), Excel reales ni `storage/`. La única excepción productiva es la plantilla limpia y ficticia habilitada explícitamente en `templates/approved/`.
 
 La CI lo verifica en cada PR (`secrets-hygiene`).
 

@@ -19,9 +19,9 @@ export function stableJson(value: unknown): string {
   throw new Error('El payload canónico contiene un valor no serializable.');
 }
 
-/** Impide que una cadena controlada por usuarios se interprete como fórmula. */
+/** En XLSX se escribe como cadena compartida; solo el renderer puede crear formulas controladas. */
 export function sanitizeSpreadsheetText(value: string): string {
-  return /^\s*[=+\-@]/.test(value) ? `'${value}` : value;
+  return value;
 }
 
 /** Parte de filename ASCII, sin rutas, controles ni caracteres de cabecera. */

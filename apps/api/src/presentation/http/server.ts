@@ -32,7 +32,7 @@ import {
 } from '../../infrastructure/postgres/uf-service.js';
 import { registerUfCalculationRoutes } from './routes/uf-calculations.js';
 import type { InvoiceWorkbookRenderer } from '../../application/invoice-requests/invoice-request-service.js';
-import { TechnicalInvoiceWorkbookRenderer } from '../../infrastructure/excel/technical-invoice-workbook.js';
+import { CandidateInvoiceWorkbookRenderer } from '../../infrastructure/excel/candidate-invoice-workbook.js';
 import { PostgresInvoiceRequestService } from '../../infrastructure/postgres/invoice-request-service.js';
 import { registerInvoiceRequestRoutes } from './routes/invoice-requests.js';
 
@@ -206,7 +206,7 @@ export async function buildServer({
     invoiceRequests: new PostgresInvoiceRequestService(
       db,
       uf,
-      invoiceWorkbookRenderer ?? new TechnicalInvoiceWorkbookRenderer(),
+      invoiceWorkbookRenderer ?? new CandidateInvoiceWorkbookRenderer(),
     ),
   });
 

@@ -166,7 +166,7 @@ De los **13 Excel** en `back/storage/exports/` (**no copiados** al repositorio: 
 
 **El caso exento sigue siendo el vacío más grave:** es la mitad de la regla tributaria (D-06) y no existe ningún archivo real contra el cual probar.
 
-**Los golden files de V1 no pueden salir de estos archivos**: contienen razones sociales, RUT y montos reales. Deben generarse con **datos ficticios** y aprobarse formalmente. La plantilla (`templates/solicitud-factura-ejemplo.xlsx`) sí es reutilizable como **estructura** — no contiene datos de clientes.
+**Los golden files de V1 no pueden salir de estos archivos**: contienen razones sociales, RUT y montos reales. Deben generarse con **datos ficticios** y aprobarse formalmente. La referencia privada se usa sólo para inspección visual local; la plantilla versionable se reconstruye limpia en `templates/approved/`.
 
 ---
 
@@ -184,10 +184,16 @@ De los **13 Excel** en `back/storage/exports/` (**no copiados** al repositorio: 
 
 ## 8. Implementación de Fase 5
 
-La Fase 5 automatiza el mapa funcional conocido con `@excel.js/exceljs`, pero **no declara equivalencia visual final**. El archivo `templates/solicitud-factura-ejemplo.xlsx` mencionado por la evidencia legacy no está presente en este repositorio, por lo que se genera `TECHNICAL_V1_UNAPPROVED` con una advertencia visible y datos ficticios en pruebas.
+Fase 5.1C usa como referencia privada `templates/reference-private/solicitud_factura_soprole_2026_abril.xls`, cuyo SHA-256 es `4b47d4a68c5b83ad16950e86374075ef158c06d7d88e0bffc608489023eb0c36`. La referencia no se versiona, no entra a Docker y no se abre en runtime.
 
-Se conservan y prueban `C4`, `C5`, `C8:C18`, `C20`, líneas CP desde fila 21, offsets, múltiples receptores, HES `N/A` y las variantes `STANDARD`/`HABITAT`. Los montos provienen de `LEGACY_V1` y se escriben como fórmulas constantes con resultado exacto; no se recalcula ni consulta UF durante la descarga. El folio no se imprime dentro del workbook ni en el nombre; un sufijo derivado del ID de exportación evita colisiones sin alterar la planilla.
+La plantilla productiva se convirtió fielmente desde ese `.xls` con Microsoft Excel COM y se limpió en `templates/approved/solicitud-factura-soprole-clone-v1.xlsx`. Se identifica como `SOLICITUD_FACTURA_CLONE_CANDIDATE_V1` hasta aprobación visual.
 
-El XLSX se genera/reabre en memoria antes de la transacción y se rechaza si excede 5 MiB, no es un ZIP XLSX válido, cambia las celdas críticas, contiene macros, conexiones o vínculos externos. Todo texto de usuario que comienza con `=`, `+`, `-` o `@` se neutraliza para evitar formula injection. El BYTEA validado se almacena con SHA-256 y toda descarga posterior devuelve exactamente esos bytes.
+La conversión conserva la hoja `Hoja1`, el formulario principal `B2:D24`, las combinaciones, anchos, altos, bordes, colores, fuentes, orientación vertical y área de impresión `B2:I34`. El renderer sólo completa celdas existentes. No imprime fecha de facturación, período, fecha UF, valor UF, número de proveedor, producto, cantidad UF ni tipo de CP/MS. Múltiples receptores usan saltos de línea en `C18:D18`; múltiples CP/MS usan saltos de línea en `C21` y `D21`.
 
-Pendiente para aprobación visual: obtener una plantilla oficial libre de datos reales, definir si el estilo es contractual y resolver E-01/E-02. Hasta entonces, la funcionalidad transaccional es verificable, pero el arte final debe considerarse observado.
+Corrección final solicitada por usuaria: `C4:D4` imprime siempre `MAS CONSULTORES S.A.`, `C22:D22` imprime siempre `MAS Plataformas`, y el bloque de notas `B26:B34` conserva el texto manual solicitado, incluida la referencia a proyecciones 2023.
+
+Neto, IVA, total y cada CP provienen de `LEGACY_V1`. Para afectas, `C16` usa la fórmula controlada `ROUNDUP((C15*19%),0)` con caché igual al IVA calculado por backend, y `C17` usa `C15+C16` con caché igual al total. En Excel en español se visualiza como `=REDONDEAR.MAS((C15*19%);0)`. Para exentas, por fidelidad a la nota original, `C15` y `C16` quedan vacías y solo se escribe `C17`. El caso de regresión conserva `425702 + 823024 = 1248726`; no se obtiene el valor incorrecto `1248727`.
+
+El XLSX se genera/reabre en memoria antes de la transacción y se rechaza si excede 5 MiB, no es un ZIP XLSX válido, contiene fórmulas fuera de las celdas controladas de montos, macros, conexiones, vínculos externos, objetos incrustados, hojas ocultas, campos técnicos visibles o el valor accidental `41`. Los textos que empiezan con `=`, `+`, `-` o `@` se guardan como strings XLSX sin apóstrofo visible y se valida que no creen nodos `<f>`. El BYTEA validado se almacena con SHA-256 y toda descarga posterior devuelve exactamente esos bytes.
+
+Pendiente para aprobación visual: abrir los seis archivos ficticios de `tmp/template-review/` y confirmar la apariencia.

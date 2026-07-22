@@ -40,7 +40,10 @@ export const INVOICE_REQUEST_MAX_RECEIVERS = 20;
 export const INVOICE_EXPORT_MAX_BYTES = 5 * 1024 * 1024;
 export const INVOICE_AREA = 'Plataformas' as const;
 export const INVOICE_CALCULATION_VERSION = 'LEGACY_V1' as const;
-export const INVOICE_TECHNICAL_TEMPLATE_VERSION = 'TECHNICAL_V1_UNAPPROVED' as const;
+export const INVOICE_CANDIDATE_TEMPLATE_VERSION = 'SOLICITUD_FACTURA_CLONE_CANDIDATE_V1' as const;
+// Identifica archivos ya persistidos por Fase 5. No se usa para generar ni
+// regenerar documentos nuevos: la descarga historica devuelve su BYTEA exacto.
+export const INVOICE_LEGACY_TECHNICAL_TEMPLATE_VERSION = 'TECHNICAL_V1_UNAPPROVED' as const;
 export const INVOICE_XLSX_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' as const;
 

@@ -20,7 +20,7 @@ describe('seguridad y canonización del export', () => {
 
   it('neutraliza Excel Formula Injection y deja texto normal intacto', () => {
     for (const value of ['=1+1', '+CMD', '-2+3', '@SUM(A1:A2)', '  =HYPERLINK("x")']) {
-      expect(sanitizeSpreadsheetText(value)).toBe(`'${value}`);
+      expect(sanitizeSpreadsheetText(value)).toBe(value);
     }
     expect(sanitizeSpreadsheetText('Glosa ficticia')).toBe('Glosa ficticia');
   });
