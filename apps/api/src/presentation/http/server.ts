@@ -35,6 +35,8 @@ import type { InvoiceWorkbookRenderer } from '../../application/invoice-requests
 import { CandidateInvoiceWorkbookRenderer } from '../../infrastructure/excel/candidate-invoice-workbook.js';
 import { PostgresInvoiceRequestService } from '../../infrastructure/postgres/invoice-request-service.js';
 import { registerInvoiceRequestRoutes } from './routes/invoice-requests.js';
+import { PostgresMasterImportService } from '../../infrastructure/postgres/master-import-service.js';
+import { registerMasterImportRoutes } from './routes/master-imports.js';
 
 export interface BuildServerOptions {
   readonly env: Env;
@@ -171,6 +173,10 @@ export async function buildServer({
           name: 'solicitudes de factura',
           description: 'Exportación final, historial, detalle, descarga y duplicación en memoria',
         },
+        {
+          name: 'importación',
+          description: 'Preview y carga controlada de maestros legacy',
+        },
       ],
     },
     transform: jsonSchemaTransform,
@@ -183,6 +189,11 @@ export async function buildServer({
   registerAuthRoutes(app, { env, identity });
   registerAdminUserRoutes(app, { env, identity });
   registerBillingMasterRoutes(app, { env, identity, masters: new PostgresMasterService(db) });
+  registerMasterImportRoutes(app, {
+    env,
+    identity,
+    imports: new PostgresMasterImportService(db),
+  });
   const http = new SafeHttpClient({
     environment: env.NODE_ENV,
     timeoutMs: env.UF_REQUEST_TIMEOUT_MS,

@@ -11,7 +11,7 @@
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:unit": "vitest run tests/domain tests/excel tests/uf/providers.test.ts tests/env.test.ts tests/guards/layer-boundaries.test.ts",
-    "test:integration": "vitest run tests/health.test.ts tests/auth.integration.test.ts tests/masters.integration.test.ts tests/uf-calculations.integration.test.ts tests/invoice-requests.integration.test.ts tests/guards/numeric.test.ts tests/guards/audit-append-only.test.ts tests/guards/folio-concurrency.test.ts",
+    "test:integration": "vitest run tests/health.test.ts tests/auth.integration.test.ts tests/masters.integration.test.ts tests/uf-calculations.integration.test.ts tests/invoice-requests.integration.test.ts tests/master-imports.integration.test.ts tests/guards/numeric.test.ts tests/guards/audit-append-only.test.ts tests/guards/folio-concurrency.test.ts",
     "test:watch": "vitest",
     "db:migrate": "node --env-file=../../.env ../../node_modules/node-pg-migrate/bin/node-pg-migrate.js --database-url-var DATABASE_URL_OWNER up",
     "db:rollback": "node --env-file=../../.env ../../node_modules/node-pg-migrate/bin/node-pg-migrate.js --database-url-var DATABASE_URL_OWNER down 1",

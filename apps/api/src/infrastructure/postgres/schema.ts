@@ -303,6 +303,56 @@ export interface InvoiceExportTable {
   created_at: Timestamp;
 }
 
+export type LegacyMasterImportMode = 'PREVIEW' | 'APPLY';
+export type LegacyMasterImportStatus = 'PREVIEWED' | 'APPLIED' | 'REJECTED';
+export type LegacyMasterImportEntity =
+  | 'issuer_company'
+  | 'coordinator_profile'
+  | 'client'
+  | 'client_invoice_rule'
+  | 'receiver'
+  | 'product'
+  | 'project_center';
+export type LegacyMasterImportOperation = 'CREATE' | 'UPDATE' | 'NOOP' | 'ERROR';
+
+export interface LegacyMasterImportRunTable {
+  id: Generated<string>;
+  actor_user_id: string;
+  idempotency_key: string;
+  mode: LegacyMasterImportMode;
+  status: LegacyMasterImportStatus;
+  source_name: string;
+  source_sha256: string;
+  payload_hash: string;
+  summary: JsonValue;
+  request_id: string | null;
+  ip: string | null;
+  user_agent: string | null;
+  created_at: Timestamp;
+}
+
+export interface LegacyMasterImportItemTable {
+  id: Generated<string>;
+  run_id: string;
+  entity: LegacyMasterImportEntity;
+  row_number: number;
+  external_id: string | null;
+  operation: LegacyMasterImportOperation;
+  target_id: string | null;
+  issues: JsonValue;
+  changes_before: JsonValue | null;
+  changes_after: JsonValue | null;
+  created_at: Timestamp;
+}
+
+export interface LegacyMasterImportMappingTable {
+  entity: Exclude<LegacyMasterImportEntity, 'client_invoice_rule'>;
+  source_name: string;
+  external_id: string;
+  target_id: string;
+  created_at: Timestamp;
+}
+
 export interface Database {
   app_role: AppRoleTable;
   app_user: AppUserTable;
@@ -323,4 +373,7 @@ export interface Database {
   invoice_request_line: InvoiceRequestLineTable;
   invoice_request_receiver: InvoiceRequestReceiverTable;
   invoice_export: InvoiceExportTable;
+  legacy_master_import_run: LegacyMasterImportRunTable;
+  legacy_master_import_item: LegacyMasterImportItemTable;
+  legacy_master_import_mapping: LegacyMasterImportMappingTable;
 }

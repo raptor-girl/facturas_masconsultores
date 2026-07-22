@@ -2,7 +2,7 @@
 
 Sistema de Solicitudes de Factura. Reemplaza el sistema anterior de MAS.
 
-**Estado: Fase 5 — solicitudes exportadas y Excel transaccional.** Una solicitud nace únicamente al exportar un XLSX validado; queda inmutable con snapshots, folio y archivo exacto en PostgreSQL. No existen borradores. Ver `docs/PHASE_5_STATUS.md`.
+**Estado: Fase 6 — importador controlado de maestros legacy.** Las solicitudes exportadas siguen siendo inmutables; Fase 6 agrega preview/apply idempotente y trazable para cargar únicamente maestros aprobados. Ver `docs/PHASE_6_STATUS.md`.
 
 ---
 
@@ -277,7 +277,7 @@ Todos los decimales cruzan API y PostgreSQL como `string`; el dominio usa `decim
 
 No hay estado borrador. `POST /invoice-requests/export` exige sesión ADMIN/COORDINATOR, CSRF e `Idempotency-Key`; revalida maestros y UF, reutiliza `LEGACY_V1`, genera y valida el XLSX en memoria y recién entonces abre la transacción que reserva folio, inserta snapshots/líneas/receptores, almacena el `BYTEA` con SHA-256 y audita. Si algo falla, no existe solicitud y el folio no se consume.
 
-El historial está en `/solicitudes`; `/solicitudes/nueva` crea y descarga, el detalle es inmutable y duplicar sólo precarga un formulario nuevo en memoria. El archivo almacenado se descarga byte por byte, sin regenerarlo. Las exportaciones nuevas usan `SOLICITUD_FACTURA_CLONE_CANDIDATE_V1`, clon visual del Excel real de Soprole cargado desde `templates/approved/solicitud-factura-soprole-clone-v1.xlsx`; C4 imprime `MAS CONSULTORES S.A.`, C22 imprime `MAS Plataformas` y las afectas sólo permiten fórmulas controladas de montos en C16/C17. La aprobación visual sigue pendiente. Los archivos históricos, incluidos `TECHNICAL_V1_UNAPPROVED` y candidatas rechazadas, no se regeneran.
+El historial está en `/solicitudes`; `/solicitudes/nueva` crea y descarga, el detalle es inmutable y duplicar sólo precarga un formulario nuevo en memoria. El archivo almacenado se descarga byte por byte, sin regenerarlo. Las exportaciones nuevas usan `SOLICITUD_FACTURA_CLONE_CANDIDATE_V1`, clon visual del Excel real de Soprole cargado desde `templates/approved/solicitud-factura-soprole-clone-v1.xlsx`; C4 imprime `MAS CONSULTORES S.A.`, C22 imprime `MAS Plataformas` y las afectas sólo permiten fórmulas controladas de montos en C16/C17. La usuaria aprobó visualmente el clon final. Los archivos históricos, incluidos `TECHNICAL_V1_UNAPPROVED` y candidatas rechazadas, no se regeneran.
 
 Para reconstruir la candidata y generar los seis casos ficticios de homologación:
 
@@ -287,6 +287,18 @@ npm run template:review
 ```
 
 Los casos quedan en `tmp/template-review/` y no se versionan. La referencia BIFF8 privada `solicitud_factura_soprole_2026_abril.xls` (SHA-256 `4b47d4a68c5b83ad16950e86374075ef158c06d7d88e0bffc608489023eb0c36`) tampoco entra a Git, Docker ni al runtime.
+
+---
+
+## Importador controlado de maestros legacy
+
+Fase 6 incorpora endpoints ADMIN para cargar maestros con dos pasos:
+
+- `POST /admin/imports/masters/preview`: valida, normaliza, detecta `CREATE`/`UPDATE`/`NOOP`/`ERROR` por fila y registra trazabilidad sin modificar maestros.
+- `POST /admin/imports/masters/apply`: aplica el mismo payload de forma transaccional e idempotente, con `Idempotency-Key`, auditoría crítica y mapeos de `externalId` legacy a IDs V1.
+- `GET /admin/imports/masters/:id`: consulta la corrida, resumen, decisiones por fila y cambios minimizados.
+
+El payload JSON acepta únicamente empresas emisoras, responsables operativos, clientes, reglas de facturación, receptores, productos y CP/MS. No acepta usuarios de acceso, contraseñas, sesiones, solicitudes históricas, folios, Excel históricos, adjuntos, Slack, correos ni proyecciones. Las pruebas usan sólo `example.invalid`.
 
 ---
 
@@ -300,6 +312,7 @@ Los casos quedan en `tmp/template-review/` y no se versionan. La referencia BIFF
 | `docs/PHASE_4_STATUS.md`            | Estado y límites de UF y motor tributario           |
 | `docs/PHASE_5_STATUS.md`            | Solicitudes inmutables, transacción y XLSX          |
 | `docs/PHASE_5_1_TEMPLATE_STATUS.md` | Homologación y estado de la plantilla candidata     |
+| `docs/PHASE_6_STATUS.md`            | Importador controlado de maestros legacy            |
 | `docs/INVOICE_TEMPLATE_CELL_MAP.md` | Mapa central, offsets y variantes del XLSX          |
 | `docs/ARCHITECTURE.md`              | Identidad, sesiones, maestros y auditoría           |
 | `docs/RUNBOOK.md`                   | Operación segura de usuarios y maestros             |
@@ -324,6 +337,6 @@ Ningún `password_hash` del sistema anterior se migra. Nunca.
 
 ## Qué NO hay todavía
 
-Borradores, edición o eliminación de solicitudes, estados distintos de `EXPORTED`, aprobación/rechazo, envío de correos, exportación de órdenes de compra, almacenamiento externo, importación de `bdmaster.sql`, datos históricos, proyecciones, Slack ni solicitudes programadas.
+Borradores, edición o eliminación de solicitudes, estados distintos de `EXPORTED`, aprobación/rechazo, envío de correos, exportación de órdenes de compra, almacenamiento externo, importación directa de `bdmaster.sql`, datos históricos de solicitudes, Excel históricos, folios históricos, proyecciones, Slack ni solicitudes programadas.
 
 Todo eso llega en fases posteriores, **con aprobación explícita**. Ver `docs/PHASE_1_STATUS.md`.

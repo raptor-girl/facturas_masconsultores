@@ -1,8 +1,8 @@
-# Arquitectura — Fases 2 a 5
+# Arquitectura — Fases 2 a 6
 
 ## Límites
 
-`app_user` representa una cuenta de autenticación. `coordinator_profile` representa un responsable operativo y su vínculo con `app_user` es opcional y único. Ninguna de las dos entidades representa todavía al responsable congelado en una solicitud, porque las solicitudes siguen fuera de alcance.
+`app_user` representa una cuenta de autenticación. `coordinator_profile` representa un responsable operativo y su vínculo con `app_user` es opcional y único. Las solicitudes exportadas congelan snapshots históricos propios; el importador legacy de Fase 6 no crea usuarios de acceso ni solicitudes históricas.
 
 La dirección de dependencias se conserva: HTTP usa el puerto `IdentityService`; PostgreSQL, Argon2id y tokens viven en infraestructura; la política de contraseña vive en dominio. Los contratos Zod compartidos generan OpenAPI y tipan la web.
 
@@ -41,6 +41,16 @@ No se auditan passwords, hashes de password, tokens, hashes de token, cookies, c
 - `project_center` enlaza directamente cliente y producto. El tipo se controla por CHECK y contrato Zod; no existe `client_product`.
 
 Las escrituras de maestros se ejecutan en el servicio PostgreSQL dentro de la misma transacción que `audit_event`. Si la auditoría crítica falla, la operación se revierte. `factuflow_app` puede leer, insertar y actualizar maestros, pero no borrarlos ni truncarlos. ADMIN modifica; ADMIN y COORDINATOR leen; una sesión sin estos roles recibe 403.
+
+## Importador controlado de maestros legacy
+
+Fase 6 agrega un puerto de aplicación `MasterImportService` y una implementación PostgreSQL para cargas JSON normalizadas. La dirección de dependencias se mantiene: HTTP valida Zod/OpenAPI, aplicación define preview/apply/get, infraestructura resuelve PostgreSQL y el dominio reutiliza normalizadores existentes de RUT, tasas y productos.
+
+El importador acepta sólo estas entidades de maestros: `issuer_company`, `coordinator_profile`, `client`, `client_invoice_rule`, `receiver`, `product` y `project_center`. No acepta `app_user`, roles, contraseñas, sesiones, solicitudes históricas, folios, Excel históricos, adjuntos, Slack, correos ni proyecciones. Los responsables importados se crean como perfiles operativos; el vínculo a `app_user` queda explícitamente fuera de alcance.
+
+Las tablas `legacy_master_import_run`, `legacy_master_import_item` y `legacy_master_import_mapping` guardan corridas idempotentes, decisiones por fila y mapeos de `externalId` legacy a IDs V1. `preview` registra una corrida `PREVIEWED` sin mutar maestros; `apply` usa el mismo plan y, si hay errores, registra `REJECTED` sin aplicar cambios. Si no hay errores, aplica en una transacción y registra `APPLIED` junto a `audit_event`. El mismo `Idempotency-Key` y payload devuelve la corrida previa; la misma clave con otro payload responde 409.
+
+Los JSONB de trazabilidad se serializan explícitamente para evitar que arrays de issues se interpreten como arrays PostgreSQL. La auditoría crítica y la corrida comparten transacción; un fallo de auditoría revierte la carga. `factuflow_app` sólo tiene SELECT/INSERT sobre tablas del importador y no puede UPDATE, DELETE ni TRUNCATE.
 
 ## RUT chileno
 

@@ -1,4 +1,4 @@
-# Runbook operativo — Fases 2 a 5
+# Runbook operativo — Fases 2 a 6
 
 ## Puesta en marcha
 
@@ -75,6 +75,25 @@ Diagnóstico de API:
 - 422 `INVALID_RUT`, `CLIENT_INCOMPLETE` o relación inactiva/inválida.
 
 OpenAPI en `/docs` es la referencia de cuerpos, paginación, búsqueda y orden. `COORDINATOR` puede consultar endpoints de maestros, pero toda escritura bajo `/admin` exige ADMIN y CSRF.
+
+## Importador controlado de maestros legacy
+
+Use el importador sólo para maestros y siempre en dos pasos. Primero ejecute `POST /admin/imports/masters/preview` con ADMIN, CSRF e `Idempotency-Key`; revise el resumen y las filas `ERROR`. El preview registra trazabilidad, pero no crea ni actualiza maestros, solicitudes ni folios.
+
+Cuando el preview no tenga errores, repita el mismo payload en `POST /admin/imports/masters/apply` con una nueva `Idempotency-Key`. El apply es transaccional: crea/actualiza/no-op por fila y registra `LEGACY_MASTER_IMPORT_APPLIED`; si el plan tiene errores, registra `LEGACY_MASTER_IMPORT_REJECTED` y no aplica maestros. Repetir la misma clave con el mismo payload devuelve la corrida previa; usar la misma clave con otro payload responde 409.
+
+El payload JSON admite exclusivamente empresas emisoras, responsables operativos, clientes, reglas de facturación, receptores, productos y CP/MS. No incluya usuarios reales de acceso, passwords, hashes, sesiones, solicitudes históricas, Excel históricos, folios, adjuntos, Slack, correos ni proyecciones. Para pruebas use dominios `example.invalid`.
+
+Diagnóstico:
+
+- 400: falta `Idempotency-Key` o el JSON no cumple contrato;
+- 401/403: sesión ausente, rol distinto de ADMIN, cambio de contraseña pendiente o CSRF inválido;
+- 409 `IMPORT_IDEMPOTENCY_CONFLICT`: misma clave con payload o modo diferente;
+- estado `REJECTED`: revise `items[].issues`; no hubo carga de maestros;
+- estado `PREVIEWED`: sólo existe trazabilidad;
+- estado `APPLIED`: los mapeos `legacy_master_import_mapping` vinculan `externalId` legacy con IDs V1.
+
+No edite manualmente `legacy_master_import_*` con el rol de aplicación. `factuflow_app` sólo puede SELECT/INSERT sobre esas tablas; no puede UPDATE, DELETE ni TRUNCATE.
 
 ## Operación UF y cálculo
 
