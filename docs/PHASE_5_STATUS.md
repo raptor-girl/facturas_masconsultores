@@ -8,7 +8,7 @@ La migración reversible `1721000000007_invoice-requests-and-exports.sql` crea �
 
 ## Flujo transaccional e idempotencia
 
-El servicio valida cliente `COMPLETE` activo, regla, emisor, responsable, CP/productos, receptores, requisitos documentales y UF exacta. Reutiliza sin duplicar `LEGACY_V1`; el frontend no puede enviar montos finales. Genera y valida el XLSX en memoria antes de abrir la transacción. Dentro de ella bloquea la clave idempotente, revalida maestros/UF, reserva folio, inserta las cuatro entidades y registra `INVOICE_REQUEST_EXPORTED`. Cualquier fallo revierte todo, incluido el contador.
+El servicio valida cliente `COMPLETE` activo, regla, emisor, responsable, CP/MS activos, producto asociado cuando exista, receptores, requisitos documentales y UF exacta. Reutiliza sin duplicar `LEGACY_V1`; el frontend no puede enviar montos finales. Genera y valida el XLSX en memoria antes de abrir la transacción. Dentro de ella bloquea la clave idempotente, revalida maestros/UF, reserva folio, inserta las cuatro entidades y registra `INVOICE_REQUEST_EXPORTED`. Cualquier fallo revierte todo, incluido el contador.
 
 La combinación `(created_by, idempotency_key)` es única. La clave se vincula al hash del payload canónico: repetir clave/payload devuelve exactamente folio y bytes previos; cambiar el payload responde 409. Doble clic concurrente crea una sola solicitud y consume un solo folio.
 

@@ -927,7 +927,7 @@ export class PostgresMasterService implements MasterService {
     await this.requireClientRow(this.db, clientId);
     let rowsQuery = this.db
       .selectFrom('project_center')
-      .innerJoin('product', 'product.id', 'project_center.product_id')
+      .leftJoin('product', 'product.id', 'project_center.product_id')
       .selectAll('project_center')
       .select('product.name as product_name')
       .where('project_center.client_id', '=', clientId);
@@ -974,7 +974,7 @@ export class PostgresMasterService implements MasterService {
   async getProjectCenter(id: string): Promise<ProjectCenter> {
     const row = await this.db
       .selectFrom('project_center')
-      .innerJoin('product', 'product.id', 'project_center.product_id')
+      .leftJoin('product', 'product.id', 'project_center.product_id')
       .selectAll('project_center')
       .select('product.name as product_name')
       .where('project_center.id', '=', id)
@@ -998,8 +998,10 @@ export class PostgresMasterService implements MasterService {
             'No se puede crear un CP/MS para un cliente inactivo.',
             422,
           );
-        const product = await this.requireProduct(trx, input.productId, true);
-        if (!product.is_active)
+        const product = input.productId
+          ? await this.requireProduct(trx, input.productId, true)
+          : null;
+        if (product && !product.is_active)
           throw new AppError('PRODUCT_INACTIVE', 'El producto debe estar activo.', 422);
         const row = await trx
           .insertInto('project_center')
@@ -1014,7 +1016,7 @@ export class PostgresMasterService implements MasterService {
           })
           .returningAll()
           .executeTakeFirstOrThrow();
-        const result = this.mapProjectCenter(row, product.name);
+        const result = this.mapProjectCenter(row, product?.name ?? null);
         await this.audit(
           trx,
           actor,
@@ -1042,14 +1044,15 @@ export class PostgresMasterService implements MasterService {
     try {
       return await this.db.transaction().execute(async (trx) => {
         const current = await this.requireProjectCenter(trx, id, true);
-        const previousProduct = await this.requireProduct(trx, current.product_id);
-        const product = input.productId
-          ? await this.requireProduct(trx, input.productId)
-          : previousProduct;
-        if (input.productId && !product.is_active) {
+        const previousProduct = current.product_id
+          ? await this.requireProduct(trx, current.product_id)
+          : null;
+        const nextProductId = input.productId === undefined ? current.product_id : input.productId;
+        const product = nextProductId ? await this.requireProduct(trx, nextProductId) : null;
+        if (product && !product.is_active) {
           throw new AppError('PRODUCT_INACTIVE', 'El producto debe estar activo.', 422);
         }
-        const before = this.mapProjectCenter(current, previousProduct.name);
+        const before = this.mapProjectCenter(current, previousProduct?.name ?? null);
         const row = await trx
           .updateTable('project_center')
           .set({
@@ -1063,7 +1066,7 @@ export class PostgresMasterService implements MasterService {
           .where('id', '=', id)
           .returningAll()
           .executeTakeFirstOrThrow();
-        const result = this.mapProjectCenter(row, product.name);
+        const result = this.mapProjectCenter(row, product?.name ?? null);
         await this.audit(
           trx,
           actor,
@@ -1089,15 +1092,17 @@ export class PostgresMasterService implements MasterService {
   ): Promise<ProjectCenter> {
     return this.db.transaction().execute(async (trx) => {
       const beforeRow = await this.requireProjectCenter(trx, id, true);
-      const product = await this.requireProduct(trx, beforeRow.product_id);
-      const before = this.mapProjectCenter(beforeRow, product.name);
+      const product = beforeRow.product_id
+        ? await this.requireProduct(trx, beforeRow.product_id)
+        : null;
+      const before = this.mapProjectCenter(beforeRow, product?.name ?? null);
       const row = await trx
         .updateTable('project_center')
         .set({ is_active: active })
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirstOrThrow();
-      const result = this.mapProjectCenter(row, product.name);
+      const result = this.mapProjectCenter(row, product?.name ?? null);
       await this.audit(
         trx,
         actor,
@@ -1357,7 +1362,7 @@ export class PostgresMasterService implements MasterService {
     row: {
       id: string;
       client_id: string;
-      product_id: string;
+      product_id: string | null;
       code: string;
       project_name: string;
       project_center_type: 'ADMINISTRATION_OPERATION' | 'DEVELOPMENT_HOURS' | 'CONSTRUCTION';
@@ -1365,7 +1370,7 @@ export class PostgresMasterService implements MasterService {
       created_at: Date;
       updated_at: Date;
     },
-    productName: string,
+    productName: string | null,
   ): ProjectCenter {
     return {
       id: row.id,

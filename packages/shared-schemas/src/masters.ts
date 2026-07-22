@@ -196,8 +196,8 @@ export type UpdateProduct = z.infer<typeof updateProductSchema>;
 export const projectCenterSchema = z.object({
   id,
   clientId: id,
-  productId: id,
-  productName: z.string(),
+  productId: id.nullable(),
+  productName: z.string().nullable(),
   code: z.string(),
   projectName: z.string(),
   projectCenterType: projectCenterTypeSchema,
@@ -206,7 +206,7 @@ export const projectCenterSchema = z.object({
 });
 export type ProjectCenter = z.infer<typeof projectCenterSchema>;
 export const createProjectCenterSchema = z.object({
-  productId: id,
+  productId: id.nullable().default(null),
   code: nonEmpty(64),
   projectName: nonEmpty(200),
   projectCenterType: projectCenterTypeSchema,

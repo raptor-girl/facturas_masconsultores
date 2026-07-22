@@ -38,7 +38,7 @@ No se auditan passwords, hashes de password, tokens, hashes de token, cookies, c
 - `client_invoice_rule` es uno-a-uno con cliente y guarda requisitos OC/HES/contrato, emisor y tratamiento sugeridos y variante `STANDARD`/`HABITAT`. Ninguna regla se infiere del nombre.
 - `receiver` pertenece a un cliente; su correo activo es único dentro de ese cliente.
 - `product` usa una clave normalizada para rechazar duplicados de mayúsculas, espacios, tildes y plurales regulares, sin fusionar filas.
-- `project_center` enlaza directamente cliente y producto. El tipo se controla por CHECK y contrato Zod; no existe `client_product`.
+- `project_center` es la entidad principal para facturar y siempre pertenece a un cliente. `product` es una clasificación derivada/administrativa opcional; cuando existe se valida actividad, pero un CP/MS puede operar sin producto directo. El tipo se controla por CHECK y contrato Zod; no existe `client_product`.
 
 Las escrituras de maestros se ejecutan en el servicio PostgreSQL dentro de la misma transacción que `audit_event`. Si la auditoría crítica falla, la operación se revierte. `factuflow_app` puede leer, insertar y actualizar maestros, pero no borrarlos ni truncarlos. ADMIN modifica; ADMIN y COORDINATOR leen; una sesión sin estos roles recibe 403.
 
@@ -46,7 +46,7 @@ Las escrituras de maestros se ejecutan en el servicio PostgreSQL dentro de la mi
 
 Fase 6 agrega un puerto de aplicación `MasterImportService` y una implementación PostgreSQL para cargas JSON normalizadas. La dirección de dependencias se mantiene: HTTP valida Zod/OpenAPI, aplicación define preview/apply/get, infraestructura resuelve PostgreSQL y el dominio reutiliza normalizadores existentes de RUT, tasas y productos.
 
-El importador acepta sólo estas entidades de maestros: `issuer_company`, `coordinator_profile`, `client`, `client_invoice_rule`, `receiver`, `product` y `project_center`. No acepta `app_user`, roles, contraseñas, sesiones, solicitudes históricas, folios, Excel históricos, adjuntos, Slack, correos ni proyecciones. Los responsables importados se crean como perfiles operativos; el vínculo a `app_user` queda explícitamente fuera de alcance.
+El importador acepta sólo estas entidades de maestros: `issuer_company`, `coordinator_profile`, `client`, `client_invoice_rule`, `receiver`, `product` y `project_center`. No acepta `app_user`, roles, contraseñas, sesiones, solicitudes históricas, folios, Excel históricos, adjuntos, Slack, correos ni proyecciones. Los responsables importados se crean como perfiles operativos; el vínculo a `app_user` queda explícitamente fuera de alcance. En datos legacy, `project_center.product_id` es opcional: la ausencia de producto no bloquea preview/apply, porque el CP/MS es la entidad facturable.
 
 Las tablas `legacy_master_import_run`, `legacy_master_import_item` y `legacy_master_import_mapping` guardan corridas idempotentes, decisiones por fila y mapeos de `externalId` legacy a IDs V1. `preview` registra una corrida `PREVIEWED` sin mutar maestros; `apply` usa el mismo plan y, si hay errores, registra `REJECTED` sin aplicar cambios. Si no hay errores, aplica en una transacción y registra `APPLIED` junto a `audit_event`. El mismo `Idempotency-Key` y payload devuelve la corrida previa; la misma clave con otro payload responde 409.
 
@@ -70,7 +70,7 @@ La recarga administrativa y sus eventos `UF_VALUE_REFRESHED`/`UF_VALUE_CHANGED` 
 
 ## Solicitud exportada e inmutable
 
-`invoice_request` representa sólo una solicitud ya exportada. El único estado permitido es `EXPORTED`; no existen tablas ni endpoints de borrador. Sus datos legales, emisor, responsable, regla, CP/producto y receptores se congelan en columnas y snapshots versionados. Cambiar un maestro después no altera el detalle ni el documento histórico.
+`invoice_request` representa sólo una solicitud ya exportada. El único estado permitido es `EXPORTED`; no existen tablas ni endpoints de borrador. Sus datos legales, emisor, responsable, regla, CP/MS, producto opcional y receptores se congelan en columnas y snapshots versionados. Cambiar un maestro después no altera el detalle ni el documento histórico.
 
 La secuencia separa trabajo fallable de la transacción corta:
 

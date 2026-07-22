@@ -82,11 +82,11 @@ interface CenterReference {
   code: string;
   projectName: string;
   projectCenterType: ProjectCenterType;
-  productId: string;
+  productId: string | null;
   productCode: string | null;
-  productName: string;
+  productName: string | null;
   centerUpdatedAt: Date;
-  productUpdatedAt: Date;
+  productUpdatedAt: Date | null;
 }
 
 interface ReceiverReference {
@@ -848,7 +848,6 @@ export class PostgresInvoiceRequestService implements InvoiceRequestService {
     const centerIds = input.lines.map((line) => line.projectCenterId);
     let centersQuery = executor
       .selectFrom('project_center as pc')
-      .innerJoin('product as p', 'p.id', 'pc.product_id')
       .select([
         'pc.id',
         'pc.client_id',
@@ -858,10 +857,6 @@ export class PostgresInvoiceRequestService implements InvoiceRequestService {
         'pc.product_id',
         'pc.is_active',
         'pc.updated_at as center_updated_at',
-        'p.code as product_code',
-        'p.name as product_name',
-        'p.is_active as product_active',
-        'p.updated_at as product_updated_at',
       ])
       .where('pc.id', 'in', centerIds);
     if (lock) centersQuery = centersQuery.forShare();
@@ -876,10 +871,41 @@ export class PostgresInvoiceRequestService implements InvoiceRequestService {
         422,
       );
     }
-    if (centerRows.some((center) => !center.is_active || !center.product_active)) {
+
+    const productIds = [
+      ...new Set(
+        centerRows
+          .map((center) => center.product_id)
+          .filter((productId): productId is string => productId !== null),
+      ),
+    ];
+    let productRows: Array<{
+      id: string;
+      code: string | null;
+      name: string;
+      is_active: boolean;
+      updated_at: Date;
+    }> = [];
+    if (productIds.length > 0) {
+      let productQuery = executor
+        .selectFrom('product')
+        .select(['id', 'code', 'name', 'is_active', 'updated_at'])
+        .where('id', 'in', productIds);
+      if (lock) productQuery = productQuery.forShare();
+      productRows = await productQuery.execute();
+    }
+    const productById = new Map(productRows.map((product) => [product.id, product]));
+
+    if (
+      centerRows.some((center) => {
+        if (!center.is_active) return true;
+        if (!center.product_id) return false;
+        return productById.get(center.product_id)?.is_active !== true;
+      })
+    ) {
       throw new AppError(
         'PROJECT_CENTER_INACTIVE',
-        'Todos los CP/MS y sus productos deben estar activos.',
+        'Todos los CP/MS deben estar activos; si tienen producto asociado, también debe estar activo.',
         422,
       );
     }
@@ -919,17 +945,20 @@ export class PostgresInvoiceRequestService implements InvoiceRequestService {
     const centers = new Map<string, CenterReference>(
       centerRows.map((center) => [
         center.id,
-        {
-          id: center.id,
-          code: center.code,
-          projectName: center.project_name,
-          projectCenterType: center.project_center_type,
-          productId: center.product_id,
-          productCode: center.product_code,
-          productName: center.product_name,
-          centerUpdatedAt: center.center_updated_at,
-          productUpdatedAt: center.product_updated_at,
-        },
+        (() => {
+          const product = center.product_id ? productById.get(center.product_id) : null;
+          return {
+            id: center.id,
+            code: center.code,
+            projectName: center.project_name,
+            projectCenterType: center.project_center_type,
+            productId: center.product_id,
+            productCode: product?.code ?? null,
+            productName: product?.name ?? null,
+            centerUpdatedAt: center.center_updated_at,
+            productUpdatedAt: product?.updated_at ?? null,
+          };
+        })(),
       ]),
     );
     const receivers = new Map<string, ReceiverReference>(
@@ -945,7 +974,11 @@ export class PostgresInvoiceRequestService implements InvoiceRequestService {
       coordinator: [coordinator.id, iso(coordinator.updated_at)],
       centers: [...centers.values()]
         .sort((left, right) => left.id.localeCompare(right.id))
-        .map((center) => [center.id, iso(center.centerUpdatedAt), iso(center.productUpdatedAt)]),
+        .map((center) => [
+          center.id,
+          iso(center.centerUpdatedAt),
+          center.productUpdatedAt ? iso(center.productUpdatedAt) : null,
+        ]),
       receivers: [...receivers.values()]
         .sort((left, right) => left.id.localeCompare(right.id))
         .map((receiver) => [receiver.id, iso(receiver.updatedAt)]),

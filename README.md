@@ -298,7 +298,7 @@ Fase 6 incorpora endpoints ADMIN para cargar maestros con dos pasos:
 - `POST /admin/imports/masters/apply`: aplica el mismo payload de forma transaccional e idempotente, con `Idempotency-Key`, auditoría crítica y mapeos de `externalId` legacy a IDs V1.
 - `GET /admin/imports/masters/:id`: consulta la corrida, resumen, decisiones por fila y cambios minimizados.
 
-El payload JSON acepta únicamente empresas emisoras, responsables operativos, clientes, reglas de facturación, receptores, productos y CP/MS. No acepta usuarios de acceso, contraseñas, sesiones, solicitudes históricas, folios, Excel históricos, adjuntos, Slack, correos ni proyecciones. Las pruebas usan sólo `example.invalid`.
+El payload JSON acepta únicamente empresas emisoras, responsables operativos, clientes, reglas de facturación, receptores, productos y CP/MS. En CP/MS, el producto es una clasificación opcional: si `productExternalId` falta no bloquea la importación; si viene informado debe resolverse. No acepta usuarios de acceso, contraseñas, sesiones, solicitudes históricas, folios, Excel históricos, adjuntos, Slack, correos ni proyecciones. Las pruebas usan sólo `example.invalid`.
 
 ---
 

@@ -13,7 +13,7 @@ export interface InvoiceWorkbookLine {
   readonly position: number;
   readonly projectCenterCode: string;
   readonly projectName: string;
-  readonly productName: string;
+  readonly productName: string | null;
   readonly ufAmount: string;
   readonly clpAmount: string;
 }

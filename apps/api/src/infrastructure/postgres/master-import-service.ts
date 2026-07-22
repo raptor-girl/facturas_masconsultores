@@ -646,22 +646,28 @@ export class PostgresMasterImportService implements MasterImportService {
     allowUpdates: boolean,
   ): Promise<InternalItem> {
     const clientRef = this.ref(refs, 'client', record.clientExternalId);
-    const productRef = this.ref(refs, 'product', record.productExternalId);
-    if (!clientRef || !productRef) {
+    const productRef = record.productExternalId
+      ? this.ref(refs, 'product', record.productExternalId)
+      : null;
+    if (!clientRef || (record.productExternalId && !productRef)) {
       return errorItem('project_center', rowNumber, record.externalId, [
         issue(
           'PROJECT_CENTER_REFERENCE_NOT_FOUND',
-          'El cliente o producto del CP/MS no existe en payload ni mapeos.',
+          'El cliente del CP/MS no existe, o se indicó un producto que no existe en payload ni mapeos.',
         ),
       ]);
     }
-    if (clientRef.pending || productRef.pending) {
+    if (clientRef.pending || productRef?.pending) {
       return item('project_center', rowNumber, record.externalId, 'CREATE', null, null, {
         ...this.projectCenterDesired(record, null, null),
         pendingReferences: true,
       });
     }
-    const desired = this.projectCenterDesired(record, clientRef.targetId, productRef.targetId);
+    const desired = this.projectCenterDesired(
+      record,
+      clientRef.targetId,
+      productRef?.targetId ?? null,
+    );
     const existing = await this.findProjectCenter(executor, sourceName, record.externalId, desired);
     return this.planExisting(
       'project_center',
@@ -812,7 +818,9 @@ export class PostgresMasterImportService implements MasterImportService {
     }
     for (const [index, record] of input.projectCenters.entries()) {
       const clientId = await mapped('client', record.clientExternalId);
-      const productId = await mapped('product', record.productExternalId);
+      const productId = record.productExternalId
+        ? await mapped('product', record.productExternalId)
+        : null;
       const result = await this.upsertProjectCenter(
         trx,
         record,
@@ -1576,12 +1584,9 @@ export class PostgresMasterImportService implements MasterImportService {
     allowUpdates: boolean,
     actor: AuthenticatedSession,
   ): Promise<InternalItem> {
-    if (!clientId || !productId) {
+    if (!clientId) {
       return errorItem('project_center', rowNumber, record.externalId, [
-        issue(
-          'PROJECT_CENTER_REFERENCE_NOT_FOUND',
-          'El cliente o producto del CP/MS no se pudo resolver.',
-        ),
+        issue('PROJECT_CENTER_REFERENCE_NOT_FOUND', 'El cliente del CP/MS no se pudo resolver.'),
       ]);
     }
     const desired = this.projectCenterDesired(record, clientId, productId);

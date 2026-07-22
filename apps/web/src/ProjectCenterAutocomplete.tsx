@@ -105,7 +105,8 @@ export function ProjectCenterAutocomplete({ clientId, onSelect }: Props): JSX.El
             >
               <strong>{projectCenter.code}</strong>
               <span>
-                {projectCenter.projectName} · {projectCenter.productName}
+                {projectCenter.projectName}
+                {projectCenter.productName ? ` · ${projectCenter.productName}` : ''}
               </span>
             </li>
           ))}

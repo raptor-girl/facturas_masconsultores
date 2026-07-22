@@ -763,7 +763,8 @@ function ClientDetailPanel({
       <ul>
         {centers.map((center) => (
           <li key={center.id}>
-            {center.code} · {center.productName}
+            {center.code}
+            {center.productName ? ` · ${center.productName}` : ''}
           </li>
         ))}
       </ul>
@@ -812,7 +813,10 @@ export function ProjectCentersPage(): JSX.Element {
         editing
           ? `/admin/project-centers/${editing.id}`
           : `/admin/clients/${client.id}/project-centers`,
-        { method: editing ? 'PATCH' : 'POST', body: JSON.stringify(form) },
+        {
+          method: editing ? 'PATCH' : 'POST',
+          body: JSON.stringify({ ...form, productId: form.productId || null }),
+        },
       );
       setForm({
         productId: '',
@@ -842,7 +846,7 @@ export function ProjectCentersPage(): JSX.Element {
         <div>
           <p className="eyebrow">Maestros de facturación</p>
           <h1>CP/MS</h1>
-          <p>Centro de proyecto relacionado directamente con cliente y producto.</p>
+          <p>Centro de proyecto principal para facturar; producto es opcional.</p>
         </div>
       </div>
       <section className="panel">
@@ -856,13 +860,12 @@ export function ProjectCentersPage(): JSX.Element {
             </h2>
             <form className="master-form" onSubmit={(event) => void submit(event)}>
               <label>
-                Producto
+                Producto opcional
                 <select
-                  required
                   value={form.productId}
                   onChange={(e) => setForm({ ...form, productId: e.target.value })}
                 >
-                  <option value="">Seleccione</option>
+                  <option value="">Sin producto asignado</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name}
@@ -923,7 +926,8 @@ export function ProjectCentersPage(): JSX.Element {
                   <div>
                     <strong>{item.code}</strong>
                     <span>
-                      {item.projectName} · {item.productName}
+                      {item.projectName}
+                      {item.productName ? ` · ${item.productName}` : ' · Sin producto asignado'}
                     </span>
                   </div>
                   <div className="row-actions">
@@ -931,7 +935,7 @@ export function ProjectCentersPage(): JSX.Element {
                       onClick={() => {
                         setEditing(item);
                         setForm({
-                          productId: item.productId,
+                          productId: item.productId ?? '',
                           code: item.code,
                           projectName: item.projectName,
                           projectCenterType: item.projectCenterType,

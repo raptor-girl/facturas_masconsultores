@@ -197,7 +197,7 @@ export interface ProductTable {
 export interface ProjectCenterTable {
   id: Generated<string>;
   client_id: string;
-  product_id: string;
+  product_id: string | null;
   code: string;
   project_name: string;
   project_center_type: ProjectCenterType;
@@ -270,9 +270,9 @@ export interface InvoiceRequestLineTable {
   project_center_code: string;
   project_name: string;
   project_center_type: ProjectCenterType;
-  product_id: string;
+  product_id: string | null;
   product_code: string | null;
-  product_name: string;
+  product_name: string | null;
   uf_amount: string;
   uf_value: string;
   clp_amount: string;

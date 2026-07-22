@@ -423,6 +423,70 @@ describe('importador controlado de maestros legacy', () => {
     expect(conflict.statusCode).toBe(409);
   });
 
+  it('importa CP/MS legacy sin producto directo porque producto es clasificacion opcional', async () => {
+    const before = await counts();
+    const input: LegacyMasterImportPayload = {
+      sourceName: 'legacy-fixture-productless',
+      options: { allowUpdates: false },
+      issuerCompanies: [],
+      coordinators: [],
+      products: [],
+      clients: [
+        {
+          externalId: 'client-productless',
+          shortName: 'Cliente Legacy Sin Producto',
+          legalName: 'Cliente Legacy Sin Producto SpA',
+          taxId: rut('77123457'),
+          businessActivity: 'Giro ficticio legacy',
+          address: 'Calle Legacy 43',
+          defaultCoordinatorExternalId: null,
+          dataStatus: 'COMPLETE',
+          isActive: true,
+        },
+      ],
+      invoiceRules: [],
+      receivers: [],
+      projectCenters: [
+        {
+          externalId: 'pc-productless',
+          clientExternalId: 'client-productless',
+          productExternalId: null,
+          code: 'CP-LEG-SIN-PROD',
+          projectName: 'Proyecto legacy sin producto',
+          projectCenterType: 'ADMINISTRATION_OPERATION',
+          isActive: true,
+        },
+      ],
+    };
+
+    const response = await request(admin, {
+      method: 'POST',
+      url: '/admin/imports/masters/apply',
+      payload: input,
+      idempotencyKey: 'phase6-productless-01',
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    const run = response.json<{
+      importRun: { status: string; summary: { create: number; error: number } };
+    }>().importRun;
+    expect(run.status).toBe('APPLIED');
+    expect(run.summary).toMatchObject({ create: 2, error: 0 });
+    expect(await counts()).toMatchObject({
+      clients: before.clients + 1,
+      products: before.products,
+      projectCenters: before.projectCenters + 1,
+      invoiceRequests: before.invoiceRequests,
+      folioCounters: before.folioCounters,
+    });
+    expect(
+      await db
+        .selectFrom('project_center')
+        .select(['code', 'product_id'])
+        .where('code', '=', 'CP-LEG-SIN-PROD')
+        .executeTakeFirst(),
+    ).toMatchObject({ code: 'CP-LEG-SIN-PROD', product_id: null });
+  });
+
   it('rechaza referencias inválidas sin cambios de maestros y sin crear usuarios', async () => {
     const before = await counts();
     const usersBefore = Number(

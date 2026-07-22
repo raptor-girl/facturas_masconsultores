@@ -24,6 +24,8 @@ La migración reversible `1721000000008_legacy-master-imports.sql` crea:
 
 `factuflow_owner` conserva ownership. `factuflow_app` tiene sólo `SELECT`/`INSERT` sobre estas tablas y no puede `UPDATE`, `DELETE` ni `TRUNCATE`.
 
+El ajuste reversible `1721000000009_optional-project-center-product.sql` deja `project_center.product_id` como opcional. La regla vigente es que CP/MS es la entidad principal de facturación; `product` queda como clasificación derivada o administrativa. La importación legacy no se bloquea por ausencia de producto directo, aunque si se informa un producto éste debe existir y estar activo para operaciones posteriores.
+
 ## API
 
 Endpoints ADMIN:
@@ -82,6 +84,7 @@ Se agregó `apps/api/tests/master-imports.integration.test.ts`, incorporado al s
 - apply transaccional de todos los maestros admitidos;
 - mapeos legacy a V1;
 - idempotencia y conflicto de idempotencia;
+- CP/MS legacy sin producto directo, manteniendo `product_id = null`;
 - rechazo por referencia inválida sin crear maestros ni usuarios;
 - auditoría de preview, apply y rejected.
 
@@ -109,10 +112,10 @@ Validación final ejecutada:
 - `npm run format:check`: OK.
 - `npm run lint`: OK.
 - `npm run typecheck`: OK.
-- `npm run test:unit`: 58/58 API y 13/13 web.
-- `npm run test:integration`: 77/77 API con PostgreSQL 16 real.
+- `npm run test:unit`: 60/60 API y 13/13 web.
+- `npm run test:integration`: 78/78 API con PostgreSQL 16 real.
 - `npm run build`: OK.
-- `npm run verify`: OK; 135/135 API y 13/13 web.
+- `npm run verify`: OK; 138/138 API y 13/13 web.
 - `npm audit --omit=dev`: 0 vulnerabilidades runtime.
 - Docker reconstruido: PostgreSQL healthy, API healthy, web HTTP 200 y OpenAPI HTTP 200 con rutas del importador.
 - `git diff --check`: OK, sólo avisos de CRLF propios de Windows.

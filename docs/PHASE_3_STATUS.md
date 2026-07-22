@@ -22,7 +22,7 @@ No crea `client_product` ni tablas de UF, solicitudes, cálculos, Excel, documen
 - RUT se valida en dominio, se persiste canónico y se presenta formateado. Un cliente pendiente puede omitirlo.
 - `default_iva_rate` es `NUMERIC(5,4)` y `string`; se valida con Decimal y no existe parser a Number.
 - Producto usa clave canónica para rechazar duplicados sin fusionar datos.
-- CP/MS relaciona cliente y producto directamente y usa un CHECK técnico para sus tres tipos.
+- CP/MS pertenece a cliente y usa un CHECK técnico para sus tres tipos. Desde el ajuste de Fase 6.1, producto es una clasificación opcional y no bloquea CP/MS legacy sin relación directa.
 - Todos los maestros se desactivan; el rol de aplicación carece de DELETE y TRUNCATE.
 
 ## API y permisos

@@ -561,7 +561,6 @@ function analyzeRows(
   let clientRowsWithHesRule = 0;
   let clientRowsMissingRut = 0;
   let clientRowsIncomplete = 0;
-  let clienteProductoRows = 0;
 
   for (const row of rows) {
     if (row.table === 'cliente') {
@@ -582,27 +581,11 @@ function analyzeRows(
       const code = normalizedKey(rowValue(row, ['codigo']));
       if (code) projectCenterTypeCodes.add(code);
     }
-    if (row.table === 'cliente_producto') clienteProductoRows += 1;
   }
 
   for (const row of rows) {
     const recognized = tableEntities.get(row.table) ?? [];
     if (recognized.length === 0) continue;
-    if (recognized.length < 0) {
-      addIssue(issues, {
-        severity: 'info',
-        code: 'TABLE_NOT_RECOGNIZED',
-        entity: null,
-        table: row.table,
-        rowNumber: row.rowNumber,
-        field: null,
-        message:
-          'La fila pertenece a una tabla que no se pudo mapear automáticamente a maestros V1.',
-        maskedValue: null,
-        requiresUserDecision: true,
-      });
-      continue;
-    }
     for (const entity of recognized) {
       increment(entities, entity, 'detected');
       increment(entities, entity, 'created');
@@ -771,37 +754,6 @@ function analyzeRows(
       message:
         'Hay clientes con razón social, giro o dirección incompletos. Requieren confirmar data_status antes de apply.',
       maskedValue: `${clientRowsIncomplete} registro(s)`,
-      requiresUserDecision: true,
-    });
-  }
-
-  if (clienteProductoRows > 0 && cpRows.length > 0) {
-    incrementBy(entities, 'project_center', 'warnings', cpRows.length);
-    addIssue(issues, {
-      severity: 'warning',
-      code: 'PROJECT_CENTER_PRODUCT_RELATION_NOT_DIRECT',
-      entity: 'project_center',
-      table: 'cp',
-      rowNumber: null,
-      field: 'product_id',
-      message:
-        'Los CP legacy no traen product_id directo. Existe cliente_producto, pero se requiere regla de negocio para asignar producto a cada CP/MS.',
-      maskedValue: `${cpRows.length} CP/MS`,
-      requiresUserDecision: true,
-    });
-  } else if (cpRows.length > 0) {
-    incrementBy(entities, 'project_center', 'blocking', cpRows.length);
-    incrementBy(entities, 'project_center', 'failed', cpRows.length);
-    addIssue(issues, {
-      severity: 'blocking',
-      code: 'PROJECT_CENTER_PRODUCT_MISSING',
-      entity: 'project_center',
-      table: 'cp',
-      rowNumber: null,
-      field: 'product_id',
-      message:
-        'Los CP legacy no traen producto directo y no hay relación auxiliar detectada para inferirlo.',
-      maskedValue: `${cpRows.length} CP/MS`,
       requiresUserDecision: true,
     });
   }

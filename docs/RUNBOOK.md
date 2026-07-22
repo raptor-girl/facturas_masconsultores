@@ -62,7 +62,7 @@ En la web, un ADMIN usa:
 - `/admin/responsables` para perfiles operativos y su vínculo opcional con cuenta;
 - `/admin/clientes` para datos legales, responsable sugerido, regla, receptores y detalle de CP/MS;
 - `/admin/productos` para nombres canónicos;
-- `/admin/cp-ms` para seleccionar cliente y administrar la relación directa con producto.
+- `/admin/cp-ms` para seleccionar cliente y administrar el CP/MS; producto es una clasificación opcional.
 
 Los registros se desactivan; no se borran. Un cliente `PENDING_COMPLETION` admite datos legales ausentes para preservar historia, mientras `COMPLETE` exige RUT válido, razón social, giro y dirección. Un cliente inactivo no admite CP/MS nuevos. La variante `HABITAT` debe elegirse explícitamente: nunca se deduce del nombre.
 
@@ -82,7 +82,7 @@ Use el importador sólo para maestros y siempre en dos pasos. Primero ejecute `P
 
 Cuando el preview no tenga errores, repita el mismo payload en `POST /admin/imports/masters/apply` con una nueva `Idempotency-Key`. El apply es transaccional: crea/actualiza/no-op por fila y registra `LEGACY_MASTER_IMPORT_APPLIED`; si el plan tiene errores, registra `LEGACY_MASTER_IMPORT_REJECTED` y no aplica maestros. Repetir la misma clave con el mismo payload devuelve la corrida previa; usar la misma clave con otro payload responde 409.
 
-El payload JSON admite exclusivamente empresas emisoras, responsables operativos, clientes, reglas de facturación, receptores, productos y CP/MS. No incluya usuarios reales de acceso, passwords, hashes, sesiones, solicitudes históricas, Excel históricos, folios, adjuntos, Slack, correos ni proyecciones. Para pruebas use dominios `example.invalid`.
+El payload JSON admite exclusivamente empresas emisoras, responsables operativos, clientes, reglas de facturación, receptores, productos y CP/MS. En CP/MS, `productExternalId` es opcional: si se informa debe existir, pero su ausencia no bloquea la importación legacy. No incluya usuarios reales de acceso, passwords, hashes, sesiones, solicitudes históricas, Excel históricos, folios, adjuntos, Slack, correos ni proyecciones. Para pruebas use dominios `example.invalid`.
 
 Diagnóstico:
 

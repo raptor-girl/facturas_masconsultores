@@ -118,7 +118,7 @@ export type LegacyProductImport = z.infer<typeof legacyProductImportSchema>;
 export const legacyProjectCenterImportSchema = z.object({
   externalId,
   clientExternalId: externalId,
-  productExternalId: externalId,
+  productExternalId: externalId.nullable().default(null),
   code: nonEmpty(64),
   projectName: nonEmpty(200),
   projectCenterType: projectCenterTypeSchema,

@@ -966,7 +966,8 @@ export function InvoiceRequestDetailPage({
               <div>
                 <strong>{line.projectCenterCode}</strong>
                 <span>
-                  {line.projectName} · {line.productName}
+                  {line.projectName}
+                  {line.productName ? ` · ${line.productName}` : ''}
                 </span>
                 <small>
                   {line.ufAmount} UF × {line.ufValue}
