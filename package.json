@@ -32,6 +32,8 @@
     "user:bootstrap-admin": "npm run user:bootstrap-admin --workspace @factuflow/api",
     "template:build": "npm run template:build --workspace @factuflow/api",
     "template:review": "npm run template:review --workspace @factuflow/api",
+    "legacy:analyze": "npm --workspace @factuflow/api run legacy:analyze --",
+    "legacy:import:masters": "npm --workspace @factuflow/api run legacy:import:masters --",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",

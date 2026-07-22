@@ -27,6 +27,7 @@ back.zip
 back/
 bdmaster.sql
 bdmaster*.sql
+legacy-private/
 seed.json
 seed.*.json
 *.dump
@@ -55,6 +56,7 @@ exports/
 *.csv
 templates/reference-private/
 tmp/template-review/
+tmp/legacy-import/
 # Excepción: golden files ficticios y aprobados (cuando existan).
 # Se habilitan uno a uno de forma explícita, nunca por patrón amplio.
 !apps/api/tests/golden/**/*.xlsx

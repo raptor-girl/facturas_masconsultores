@@ -10,7 +10,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run",
-    "test:unit": "vitest run tests/domain tests/excel tests/uf/providers.test.ts tests/env.test.ts tests/guards/layer-boundaries.test.ts",
+    "test:unit": "vitest run tests/domain tests/excel tests/legacy tests/uf/providers.test.ts tests/env.test.ts tests/guards/layer-boundaries.test.ts",
     "test:integration": "vitest run tests/health.test.ts tests/auth.integration.test.ts tests/masters.integration.test.ts tests/uf-calculations.integration.test.ts tests/invoice-requests.integration.test.ts tests/master-imports.integration.test.ts tests/guards/numeric.test.ts tests/guards/audit-append-only.test.ts tests/guards/folio-concurrency.test.ts",
     "test:watch": "vitest",
     "db:migrate": "node --env-file=../../.env ../../node_modules/node-pg-migrate/bin/node-pg-migrate.js --database-url-var DATABASE_URL_OWNER up",
@@ -18,7 +18,9 @@
     "db:status": "node --env-file=../../.env ../../node_modules/node-pg-migrate/bin/node-pg-migrate.js --database-url-var DATABASE_URL_OWNER --dry-run up",
     "user:bootstrap-admin": "node --env-file=../../.env --import tsx src/cli/bootstrap-admin.ts",
     "template:build": "cd ../.. && node --import tsx apps/api/src/cli/create-approved-invoice-template.ts",
-    "template:review": "cd ../.. && node --import tsx apps/api/src/cli/create-template-review-files.ts"
+    "template:review": "cd ../.. && node --import tsx apps/api/src/cli/create-template-review-files.ts",
+    "legacy:analyze": "cd ../.. && node --import tsx apps/api/src/cli/legacy-analyze.ts",
+    "legacy:import:masters": "cd ../.. && node --import tsx apps/api/src/cli/legacy-import-masters.ts"
   },
   "dependencies": {
     "@excel.js/exceljs": "^0.9.0",
