@@ -152,6 +152,13 @@ const LEGACY_TECHNICAL_TABLES = new Set([
   'uf_cache',
   'version_plantilla',
 ]);
+const LEGACY_PROJECT_CENTER_TYPE_ALIASES = new Map([
+  ['administracion y operacion', 'ADMINISTRATION_OPERATION'],
+  ['admin_operacion', 'ADMINISTRATION_OPERATION'],
+  ['construccion', 'CONSTRUCTION'],
+  ['horas de desarrollo', 'DEVELOPMENT_HOURS'],
+  ['horas_desarrollo', 'DEVELOPMENT_HOURS'],
+]);
 
 function emptyCounts(): EntityCounts {
   return {
@@ -579,7 +586,9 @@ function analyzeRows(
     }
     if (row.table === 'catalogo_tipo_cp') {
       const code = normalizedKey(rowValue(row, ['codigo']));
+      const name = normalizedKey(rowValue(row, ['nombre']));
       if (code) projectCenterTypeCodes.add(code);
+      if (name) projectCenterTypeCodes.add(name);
     }
   }
 
@@ -673,7 +682,7 @@ function analyzeRows(
     }
 
     const clientField = findField(row, ['cliente', 'client', 'razon', 'nombre']);
-    if (clientField?.[1] && includesAny(clientField[1], ['habitat'])) {
+    if (row.table !== 'receptor' && clientField?.[1] && includesAny(clientField[1], ['habitat'])) {
       increment(entities, 'client_invoice_rule', 'warnings');
       addIssue(issues, {
         severity: 'warning',
@@ -780,7 +789,12 @@ function analyzeRows(
 
   const cpRowsWithUnknownType = cpRows.filter((row) => {
     const type = normalizedKey(rowValue(row, ['tipo_cp']));
-    return type !== null && projectCenterTypeCodes.size > 0 && !projectCenterTypeCodes.has(type);
+    return (
+      type !== null &&
+      projectCenterTypeCodes.size > 0 &&
+      !projectCenterTypeCodes.has(type) &&
+      !LEGACY_PROJECT_CENTER_TYPE_ALIASES.has(type)
+    );
   });
   if (cpRowsWithUnknownType.length > 0) {
     incrementBy(entities, 'project_center', 'warnings', cpRowsWithUnknownType.length);

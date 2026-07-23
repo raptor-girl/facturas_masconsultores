@@ -68,4 +68,40 @@ describe('preview local de maestros legacy', () => {
     expect(issues).not.toContain('facturacion@example.invalid');
     await expect(readFile(overrides, 'utf8')).resolves.toContain('requires_user_decision');
   });
+
+  it('acepta etiquetas legacy de tipo CP/MS y agrupa Habitat por cliente', async () => {
+    const root = await tempRoot();
+    const source = join(root, 'bdmaster.sql');
+    const overrides = join(root, 'import-overrides.draft.json');
+    await writeFile(
+      source,
+      [
+        'CREATE TABLE catalogo_tipo_cp (codigo TEXT, nombre TEXT, activo INTEGER);',
+        'CREATE TABLE cliente (id TEXT, nombre_corto TEXT, razon_social TEXT, rut TEXT, giro TEXT, direccion TEXT, requiere_hes INTEGER);',
+        'CREATE TABLE receptor (id TEXT, cliente_id TEXT, nombre TEXT, email TEXT, activo INTEGER);',
+        'CREATE TABLE cp (id TEXT, codigo TEXT, nombre TEXT, tipo_cp TEXT, cliente_id TEXT);',
+        "INSERT INTO catalogo_tipo_cp (codigo, nombre, activo) VALUES ('ADMIN_OPERACION', 'Administracion y Operacion', 1), ('CONSTRUCCION', 'Construccion', 1), ('HORAS_DESARROLLO', 'Horas de Desarrollo', 1);",
+        "INSERT INTO cliente (id, nombre_corto, razon_social, rut, giro, direccion, requiere_hes) VALUES ('cli_afp_habitat', 'AFP HABITAT', 'AFP HABITAT S.A.', '98.000.100-8', 'Servicios', 'Providencia 1909', 0);",
+        "INSERT INTO receptor (id, cliente_id, nombre, email, activo) VALUES ('recep_1', 'cli_afp_habitat', 'Facturas', 'facturas@example.invalid', 1), ('recep_2', 'cli_afp_habitat', 'DTE', 'dte@example.invalid', 1);",
+        "INSERT INTO cp (id, codigo, nombre, tipo_cp, cliente_id) VALUES ('cp_1', 'MS1', 'LMS', 'Administración y Operación', 'cli_afp_habitat'), ('cp_2', 'MS2', 'Construcción', 'Construcción', 'cli_afp_habitat'), ('cp_3', 'MS3', 'Horas', 'Horas de Desarrollo', 'cli_afp_habitat');",
+      ].join('\n'),
+      'utf8',
+    );
+
+    const report = await runLegacyMasterPreview({
+      sourcePath: source,
+      outputDir: join(root, 'reports'),
+      overridesPath: overrides,
+      mode: 'DRY_RUN',
+    });
+
+    expect(
+      report.issues.filter((issue) => issue.code === 'PROJECT_CENTER_TYPE_UNKNOWN'),
+    ).toHaveLength(0);
+    expect(report.issues.filter((issue) => issue.code === 'POSSIBLE_HABITAT_CLIENT')).toHaveLength(
+      1,
+    );
+    expect(report.entities.project_center.warnings).toBe(0);
+    expect(report.entities.client_invoice_rule.warnings).toBe(2);
+  });
 });
