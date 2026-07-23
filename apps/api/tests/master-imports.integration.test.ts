@@ -423,6 +423,68 @@ describe('importador controlado de maestros legacy', () => {
     expect(conflict.statusCode).toBe(409);
   });
 
+  it('rechaza apply si aparecen errores durante la aplicacion y revierte cambios parciales', async () => {
+    const before = await counts();
+    const input: LegacyMasterImportPayload = {
+      sourceName: 'legacy-fixture-apply-error-items',
+      options: { allowUpdates: false },
+      issuerCompanies: [],
+      coordinators: [],
+      clients: [],
+      invoiceRules: [],
+      receivers: [],
+      products: [
+        {
+          externalId: 'product-talento-canonical',
+          code: null,
+          name: 'Talento',
+          isActive: true,
+        },
+        {
+          externalId: 'product-talentos-alias',
+          code: null,
+          name: 'Talentos',
+          isActive: true,
+        },
+      ],
+      projectCenters: [],
+    };
+
+    const response = await request(admin, {
+      method: 'POST',
+      url: '/admin/imports/masters/apply',
+      payload: input,
+      idempotencyKey: 'phase6-apply-error-items-01',
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    const run = response.json<{
+      importRun: {
+        id: string;
+        status: string;
+        summary: { create: number; error: number };
+      };
+    }>().importRun;
+    expect(run.status).toBe('REJECTED');
+    expect(run.summary).toMatchObject({ create: 1, error: 1 });
+    expect(await counts()).toEqual(before);
+    expect(
+      await db
+        .selectFrom('legacy_master_import_item')
+        .select(['operation', 'external_id'])
+        .where('run_id', '=', run.id)
+        .where('operation', '=', 'ERROR')
+        .execute(),
+    ).toEqual([{ operation: 'ERROR', external_id: 'product-talentos-alias' }]);
+    expect(
+      await db
+        .selectFrom('audit_event')
+        .select('id')
+        .where('action', '=', 'LEGACY_MASTER_IMPORT_REJECTED')
+        .where('entity_id', '=', run.id)
+        .executeTakeFirst(),
+    ).toBeTruthy();
+  });
+
   it('importa CP/MS legacy sin producto directo porque producto es clasificacion opcional', async () => {
     const before = await counts();
     const input: LegacyMasterImportPayload = {

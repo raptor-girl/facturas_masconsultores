@@ -47,6 +47,12 @@ interface ExistingRecord {
   readonly comparable: Record<string, unknown>;
 }
 
+class ApplyProducedErrorItems extends Error {
+  constructor(readonly items: readonly InternalItem[]) {
+    super('Apply produced error items');
+  }
+}
+
 const ENTITIES = [
   'issuer_company',
   'coordinator_profile',
@@ -232,42 +238,106 @@ export class PostgresMasterImportService implements MasterImportService {
     }
 
     const planned = await this.plan(this.db, input, sourceName);
-    const hasErrors = planned.some((plannedItem) => plannedItem.operation === 'ERROR');
-    const status: LegacyImportStatus =
-      mode === 'PREVIEW' ? 'PREVIEWED' : hasErrors ? 'REJECTED' : 'APPLIED';
+    const plannedHasErrors = planned.some((plannedItem) => plannedItem.operation === 'ERROR');
 
-    return this.db.transaction().execute(async (trx) => {
-      const items =
-        mode === 'APPLY' && !hasErrors
-          ? await this.applyPayload(trx, input, sourceName, actor)
-          : planned;
-      const summary = entitySummary(items);
-      const runRow = await this.insertRun(
-        trx,
-        actor,
-        idempotencyKey,
-        mode,
-        status,
-        sourceName,
-        sourceSha256,
-        payloadHash,
-        summary,
-        context,
-      );
-      await this.insertItems(trx, runRow.id, items);
-      await this.auditRun(trx, actor, status, runRow.id, context, summary);
-      return {
-        id: runRow.id,
-        mode,
-        status,
-        sourceName,
-        sourceSha256,
-        payloadHash,
-        summary,
-        createdAt: iso(runRow.created_at),
-        items,
-      };
-    });
+    if (mode === 'PREVIEW' || plannedHasErrors) {
+      const status: LegacyImportStatus = mode === 'PREVIEW' ? 'PREVIEWED' : 'REJECTED';
+      return this.db
+        .transaction()
+        .execute((trx) =>
+          this.persistRun(
+            trx,
+            actor,
+            idempotencyKey,
+            mode,
+            status,
+            sourceName,
+            sourceSha256,
+            payloadHash,
+            planned,
+            context,
+          ),
+        );
+    }
+
+    try {
+      return await this.db.transaction().execute(async (trx) => {
+        const applied = await this.applyPayload(trx, input, sourceName, actor);
+        if (applied.some((appliedItem) => appliedItem.operation === 'ERROR')) {
+          throw new ApplyProducedErrorItems(applied);
+        }
+        return this.persistRun(
+          trx,
+          actor,
+          idempotencyKey,
+          mode,
+          'APPLIED',
+          sourceName,
+          sourceSha256,
+          payloadHash,
+          applied,
+          context,
+        );
+      });
+    } catch (error) {
+      if (!(error instanceof ApplyProducedErrorItems)) throw error;
+      return this.db
+        .transaction()
+        .execute((trx) =>
+          this.persistRun(
+            trx,
+            actor,
+            idempotencyKey,
+            mode,
+            'REJECTED',
+            sourceName,
+            sourceSha256,
+            payloadHash,
+            error.items,
+            context,
+          ),
+        );
+    }
+  }
+
+  private async persistRun(
+    trx: Transaction<Database>,
+    actor: AuthenticatedSession,
+    idempotencyKey: string,
+    mode: 'PREVIEW' | 'APPLY',
+    status: LegacyImportStatus,
+    sourceName: string,
+    sourceSha256: string,
+    payloadHash: string,
+    items: readonly InternalItem[],
+    context: RequestContext,
+  ): Promise<LegacyMasterImportRun> {
+    const summary = entitySummary(items);
+    const runRow = await this.insertRun(
+      trx,
+      actor,
+      idempotencyKey,
+      mode,
+      status,
+      sourceName,
+      sourceSha256,
+      payloadHash,
+      summary,
+      context,
+    );
+    await this.insertItems(trx, runRow.id, items);
+    await this.auditRun(trx, actor, status, runRow.id, context, summary);
+    return {
+      id: runRow.id,
+      mode,
+      status,
+      sourceName,
+      sourceSha256,
+      payloadHash,
+      summary,
+      createdAt: iso(runRow.created_at),
+      items: [...items],
+    };
   }
 
   private async findExistingRun(actorUserId: string, idempotencyKey: string) {
